@@ -10,6 +10,7 @@ import { useAvatarViewerStore } from '@lib/state/components/AvatarViewer'
 import { Theme } from '@lib/theme/ThemeManager'
 
 import { getImmersivePortraitSize } from './ChatFrame'
+import LipSyncPortrait from './LipSyncPortrait'
 import PortraitBreathing from './PortraitBreathing'
 
 type ImmersivePortraitHeaderProps = {
@@ -32,17 +33,19 @@ const ImmersivePortraitHeader: React.FC<ImmersivePortraitHeaderProps> = ({ nowGe
             <Animated.View entering={portraitEntrance}>
                 <PortraitBreathing active={nowGenerating}>
                     <TouchableOpacity onPress={() => setShowViewer(true, false)}>
-                        <Avatar
-                            contentFit="cover"
-                            style={{
-                                width: immersivePortraitSize.width,
-                                height: immersivePortraitSize.height,
-                                borderRadius: borderRadius.xl2,
-                                borderWidth: 2,
-                                borderColor: color.neutral._100 + '88',
-                            }}
-                            targetImage={Characters.getImageDir(stableCharImageId)}
-                        />
+                        <LipSyncPortrait radius={borderRadius.xl2}>
+                            <Avatar
+                                contentFit="cover"
+                                style={{
+                                    width: immersivePortraitSize.width,
+                                    height: immersivePortraitSize.height,
+                                    borderRadius: borderRadius.xl2,
+                                    borderWidth: 2,
+                                    borderColor: color.neutral._100 + '88',
+                                }}
+                                targetImage={Characters.getImageDir(stableCharImageId)}
+                            />
+                        </LipSyncPortrait>
                     </TouchableOpacity>
                 </PortraitBreathing>
             </Animated.View>

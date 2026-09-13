@@ -30,6 +30,7 @@ import i18n from '@lib/i18n'
 import { Characters } from '@lib/state/Characters'
 import { Chats, useInference } from '@lib/state/Chat'
 import { useChatInputTextStore } from '@lib/state/components/ChatInput'
+import { useLipSyncSession } from '@lib/state/LemonSlice'
 import { Logger } from '@lib/state/Logger'
 import { Theme } from '@lib/theme/ThemeManager'
 
@@ -333,6 +334,8 @@ const ChatInput = () => {
                     onChangeText={(text) => {
                         setHideOptions(!!text)
                         setNewMessage(text)
+                        // Typing a long message must not trip the lip-sync idle disconnect.
+                        useLipSyncSession.getState().markActivity()
                     }}
                     multiline
                     submitBehavior={sendOnEnter ? 'blurAndSubmit' : 'newline'}

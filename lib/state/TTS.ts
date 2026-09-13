@@ -7,6 +7,7 @@ import { useShallow } from 'zustand/react/shallow'
 import i18n from '@lib/i18n'
 
 import { Storage } from '@lib/enums/Storage'
+import { isLipSyncVoicing } from '@lib/state/LemonSlice'
 import { Logger } from '@lib/state/Logger'
 import { createMMKVStorage } from '@lib/storage/MMKV'
 
@@ -466,6 +467,8 @@ export const useTTSStore = create<TTSState>()(
 
             handleEndGeneration: async (lastIndex, text) => {
                 if (!get().enabled) return
+                // The lip-sync avatar voices the reply itself; playing TTS too would double it.
+                if (isLipSyncVoicing()) return
                 if (get().liveTTS) {
                     get().clearAndRunBuffer(lastIndex)
                 } else if (get().auto) {
@@ -506,7 +509,8 @@ export const useTTSStore = create<TTSState>()(
                 set({ buffer: '' })
             },
             insertBuffer: (text: string) => {
-                if (!get().enabled || !get().liveTTS || get().pauseLive) return
+                if (!get().enabled || !get().liveTTS || get().pauseLive || isLipSyncVoicing())
+                    return
                 const newBuffer = get().buffer + text
 
                 let lastMatchIndex = -1

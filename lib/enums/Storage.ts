@@ -17,4 +17,5 @@ export enum Storage {
     ChatStyle = 'storage-chat-text-styling',
     Language = 'language-storage',
     LiteLLMModels = 'litellm-models-storage',
+    LemonSlice = 'lemonslice-storage',
 }

@@ -147,7 +147,8 @@
         "characterMemory": "角色記憶管理",
         "logs": "系統日誌",
         "about": "關於",
-        "settings": "設定"
+        "settings": "設定",
+        "lemonSlice": "動畫對嘴"
     },
     "settings": {
         "title": "設定",
@@ -837,5 +838,32 @@
         "deleteAllTitle": "刪除所有關鍵事實",
         "deleteAllDesc": "要移除此對話已儲存的所有關鍵事實嗎？此操作無法復原。",
         "missingChat": "找不到此對話"
+    },
+    "lemonSlice": {
+        "title": "動畫對嘴",
+        "experimental": "測試性功能",
+        "description": "連線後，角色聊天中的立繪會換成 LemonSlice 即時動畫，AI 每次回覆都會用你的 ElevenLabs 聲音念出並同步動嘴。中斷連線後恢復原本的靜態立繪。",
+        "enable": "啟用 LemonSlice 動畫對嘴",
+        "reminder": "按連線時間計費，角色沒在講話也會扣點。聊天結束請務必主動按「中斷連線」。另外連續 {{seconds}} 秒沒有任何操作也會自動斷線。",
+        "apiKey": "LemonSlice API 金鑰",
+        "dailyUrl": "Daily 房間網址",
+        "dailyApiKey": "Daily API 金鑰",
+        "dailyApiKeyDesc": "用來換 meeting token，LemonSlice 規定必填，公開房間也一樣。",
+        "character": "連線角色：{{name}}",
+        "noCharacter": "尚未載入角色，請先開啟一個角色聊天。",
+        "voiceNote": "語音使用「語音設定」裡的 ElevenLabs 金鑰（輸出 PCM 需 Creator 以上方案）。",
+        "missingElevenLabs": "請先在語音設定填入 ElevenLabs 金鑰。",
+        "layoutNote": "動畫立繪會出現在視覺小說與沉浸式版面；訊息版面維持原本的語音播放。",
+        "connect": "連線",
+        "disconnect": "中斷連線",
+        "state": {
+            "idle": "未連線",
+            "connecting": "連線中",
+            "connected": "已連線",
+            "error": "錯誤"
+        },
+        "meter": "已連線 {{elapsed}} · 約 ${{cost}} · {{idle}} 秒後閒置斷線",
+        "missingKeys": "請填入 LemonSlice 金鑰、Daily 房間網址與 Daily 金鑰",
+        "idleDisconnected": "連續 {{seconds}} 秒沒有操作，動畫對嘴已自動斷線"
     }
 }

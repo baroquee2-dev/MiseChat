@@ -147,7 +147,8 @@
         "characterMemory": "Character Memory",
         "logs": "System Logs",
         "about": "About",
-        "settings": "Settings"
+        "settings": "Settings",
+        "lemonSlice": "Lip Sync (Beta)"
     },
     "settings": {
         "title": "Settings",
@@ -837,5 +838,32 @@
         "deleteAllTitle": "Delete All Key Facts",
         "deleteAllDesc": "Remove every key fact saved for this chat? This cannot be undone.",
         "missingChat": "Chat not found"
+    },
+    "lemonSlice": {
+        "title": "Animated Lip Sync",
+        "experimental": "Experimental",
+        "description": "While connected, the character portrait in chat is replaced by a live LemonSlice avatar that speaks each AI reply with your ElevenLabs voice. Disconnecting brings back the static portrait.",
+        "enable": "Enable LemonSlice lip sync",
+        "reminder": "Billed by connection time, even while the character is silent. Always press Disconnect when you finish chatting. The session also ends by itself after {{seconds}} seconds without any activity.",
+        "apiKey": "LemonSlice API key",
+        "dailyUrl": "Daily room URL",
+        "dailyApiKey": "Daily API key",
+        "dailyApiKeyDesc": "Used to mint a meeting token, which LemonSlice requires even for public rooms.",
+        "character": "Connects as: {{name}}",
+        "noCharacter": "No character loaded — open a character chat first.",
+        "voiceNote": "Voice uses the ElevenLabs key from Voice settings (PCM output needs the Creator plan or above).",
+        "missingElevenLabs": "Set an ElevenLabs API key in Voice settings first.",
+        "layoutNote": "The animated portrait appears in the visual novel and immersive layouts. The messenger layout keeps regular voice playback.",
+        "connect": "Connect",
+        "disconnect": "Disconnect",
+        "state": {
+            "idle": "idle",
+            "connecting": "connecting",
+            "connected": "connected",
+            "error": "error"
+        },
+        "meter": "Connected {{elapsed}} · ≈ ${{cost}} · idle disconnect in {{idle}}s",
+        "missingKeys": "Fill in the LemonSlice key, Daily room URL and Daily key",
+        "idleDisconnected": "No activity for {{seconds}}s — lip sync disconnected"
     }
 }

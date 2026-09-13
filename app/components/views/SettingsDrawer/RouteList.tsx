@@ -114,6 +114,11 @@ const getPaths = (remote: boolean): ButtonData[] => [
         icon: 'book',
     },
     {
+        nameKey: 'nav.lemonSlice',
+        path: '/screens/LemonSliceScreen' as Href,
+        icon: 'video-camera',
+    },
+    {
         nameKey: 'nav.logs',
         path: '/screens/LogsScreen',
         icon: 'code',
