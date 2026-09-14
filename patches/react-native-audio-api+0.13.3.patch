@@ -1,8 +1,22 @@
 diff --git a/node_modules/react-native-audio-api/android/build.gradle b/node_modules/react-native-audio-api/android/build.gradle
-index 0033a2b..f03c413 100644
+index 0033a2b..859e8e0 100644
 --- a/node_modules/react-native-audio-api/android/build.gradle
 +++ b/node_modules/react-native-audio-api/android/build.gradle
-@@ -320,6 +320,14 @@ def assertMinimalReactNativeVersion = task assertMinimalReactNativeVersionTask {
+@@ -224,6 +224,13 @@ android {
+   externalNativeBuild {
+     cmake {
+       path "CMakeLists.txt"
++      // The C++ sources live outside this CMake project, so CMake names their objects after
++      // the full source path and only shortens it when the build directory leaves enough room.
++      // Under node_modules the RelWithDebInfo directory does not, and Windows ninja then fails
++      // to create the resulting 300+ character paths. A shorter build directory restores it.
++      if (Os.isFamily(Os.FAMILY_WINDOWS)) {
++        buildStagingDirectory "${rootProject.projectDir}/.cxx-audioapi"
++      }
+     }
+   }
+ 
+@@ -320,6 +327,14 @@ def assertMinimalReactNativeVersion = task assertMinimalReactNativeVersionTask {
  task downloadPrebuiltBinaries(type: Exec) {
    def isWindows = Os.isFamily(Os.FAMILY_WINDOWS)
    if (isWindows) {
