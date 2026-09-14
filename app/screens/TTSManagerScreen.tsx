@@ -109,13 +109,11 @@ type CartesiaModel = {
 }
 
 const cartesiaModels: CartesiaModel[] = [
-    {
-        model_id: 'sonic-3.5',
-        name: 'Sonic 3.5',
-        descKey: 'latest',
-    },
+    { model_id: 'sonic-3.6', name: 'Sonic 3.6', descKey: 'latest' },
+    { model_id: 'sonic-3.5', name: 'Sonic 3.5', descKey: 'stable' },
     { model_id: 'sonic-3', name: 'Sonic 3', descKey: 'stable' },
-    { model_id: 'sonic-latest', name: 'Sonic Latest', descKey: 'preview' },
+    // Cartesia deprecated `sonic-latest` in favour of `sonic-preview`.
+    { model_id: 'sonic-preview', name: 'Sonic Preview', descKey: 'preview' },
 ]
 
 const cartesiaLanguageCodes = ['zh', 'en', 'ja', 'ko', 'fr', 'de', 'es', 'pt'] as const

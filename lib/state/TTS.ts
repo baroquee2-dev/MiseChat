@@ -222,7 +222,7 @@ export const useTTSStore = create<TTSState>()(
             geminiModel: 'gemini-3.1-flash-tts-preview',
             cartesiaApiKey: '',
             cartesiaVoiceId: 'db6b0ed5-d5d3-463d-ae85-518a07d3c2b4',
-            cartesiaModel: 'sonic-3.5',
+            cartesiaModel: 'sonic-3.6',
             cartesiaLanguage: 'zh',
             activeChatIndex: undefined,
             startTTS: async (text: string, index: number) => {
