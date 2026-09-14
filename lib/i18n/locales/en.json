@@ -148,8 +148,7 @@
         "logs": "System Logs",
         "about": "About",
         "settings": "Settings",
-        "lemonSlice": "Lip Sync (Beta)",
-        "spriteLipSync": "Mouth Sprite Test"
+        "lemonSlice": "Lip Sync (Beta)"
     },
     "mouthSprites": {
         "enable": "Image lip sync",
@@ -184,34 +183,6 @@
         "removeDesc": "Remove the three mouth images bound to {{name}}?",
         "removeConfirm": "Remove",
         "removed": "Mouth images removed"
-    },
-    "spriteLipSync": {
-        "title": "Mouth Sprite Test",
-        "description": "Upload closed, half-open and open mouth images. They switch with the voice volume to make the character talk. Replies come from the active API connection, and speech uses ElevenLabs, Cartesia or Gemini from Voice settings.",
-        "closed": "Closed",
-        "half": "Half open",
-        "open": "Open",
-        "pick": "Choose image",
-        "character": "Character",
-        "characterPlaceholder": "e.g. You are Yuki, a playful cat-eared girl. Reply in one to three sentences.",
-        "halfThreshold": "Half-open threshold",
-        "openThreshold": "Open threshold",
-        "level": "Current volume {{level}}",
-        "inputPlaceholder": "Type a message…",
-        "send": "Send",
-        "stop": "Stop",
-        "clear": "Clear chat",
-        "thinking": "Thinking…",
-        "speaking": "Speaking…",
-        "userLabel": "User",
-        "characterLabel": "Character",
-        "replyInstruction": "Stay in character and reply in natural spoken language. Output only the words to be spoken, with no actions, narration or markup. One to three sentences.",
-        "historyPrompt": "Conversation so far:\n{{history}}\n\nReply to the user's last message.",
-        "missingImages": "Upload all three mouth images first.",
-        "missingCharacter": "Fill in the character first.",
-        "generationFailed": "Could not generate a reply. Check the logs.",
-        "voiceUnsupported": "Device voice cannot report volume. Switch Voice settings to ElevenLabs, Cartesia or Gemini.",
-        "voiceMissingKey": "{{provider}} in Voice settings has no API key."
     },
     "settings": {
         "title": "Settings",

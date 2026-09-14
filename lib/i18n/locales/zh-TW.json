@@ -148,8 +148,7 @@
         "logs": "系統日誌",
         "about": "關於",
         "settings": "設定",
-        "lemonSlice": "動畫對嘴",
-        "spriteLipSync": "嘴型輪播測試"
+        "lemonSlice": "動畫對嘴"
     },
     "mouthSprites": {
         "enable": "靜態圖片輪播對嘴",
@@ -184,34 +183,6 @@
         "removeDesc": "確定要移除「{{name}}」綁定的三張嘴型圖嗎？",
         "removeConfirm": "移除",
         "removed": "已移除嘴型圖"
-    },
-    "spriteLipSync": {
-        "title": "嘴型輪播測試",
-        "description": "上傳閉嘴、半開、全開三張圖，會依語音音量即時切換，模擬角色說話。回覆由目前的 API 連線產生，語音使用語音設定中的 ElevenLabs、Cartesia 或 Gemini。",
-        "closed": "閉嘴",
-        "half": "半開",
-        "open": "全開",
-        "pick": "選擇圖片",
-        "character": "角色設定",
-        "characterPlaceholder": "例如：你是名叫小雪的貓耳少女，說話俏皮，每次回覆一到三句。",
-        "halfThreshold": "半開門檻",
-        "openThreshold": "全開門檻",
-        "level": "目前音量 {{level}}",
-        "inputPlaceholder": "輸入訊息…",
-        "send": "送出",
-        "stop": "停止",
-        "clear": "清除對話",
-        "thinking": "思考中…",
-        "speaking": "說話中…",
-        "userLabel": "使用者",
-        "characterLabel": "角色",
-        "replyInstruction": "請維持角色身分，用自然的口語回覆。只輸出要說出口的台詞，不要動作描述、旁白或任何標記，一到三句即可。",
-        "historyPrompt": "目前的對話：\n{{history}}\n\n請回覆使用者的最後一句話。",
-        "missingImages": "請先上傳三張嘴型圖片。",
-        "missingCharacter": "請先填寫角色設定。",
-        "generationFailed": "回覆產生失敗，請查看系統日誌。",
-        "voiceUnsupported": "裝置內建語音無法取得音量，請在語音設定改用 ElevenLabs、Cartesia 或 Gemini。",
-        "voiceMissingKey": "語音設定中的 {{provider}} 尚未填入金鑰。"
     },
     "settings": {
         "title": "設定",
