@@ -1,11 +1,20 @@
+import { Image } from 'expo-image'
 import { ReactNode, useEffect, useState } from 'react'
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native'
 import { WebView, type WebViewMessageEvent } from 'react-native-webview'
 import { useShallow } from 'zustand/react/shallow'
 
+import { PcmStreamPlayer } from '@lib/audio/PcmStreamPlayer'
 import { buildDailyViewerHtml } from '@lib/lemonslice/dailyViewerHtml'
+import { Characters } from '@lib/state/Characters'
 import { useLipSyncSession, useLipSyncSettings } from '@lib/state/LemonSlice'
 import { Logger } from '@lib/state/Logger'
+import {
+    MOUTH_SLOTS,
+    type MouthSlot,
+    type MouthSpriteSet,
+    useActiveMouthSprites,
+} from '@lib/state/MouthSprites'
 
 type LipSyncPortraitProps = {
     children: ReactNode
@@ -13,8 +22,48 @@ type LipSyncPortraitProps = {
     radius?: number
 }
 
+/** Speech RMS mostly sits around 0.05–0.2, so these split quiet, normal and loud. */
+const HALF_OPEN_LEVEL = 0.03
+const OPEN_LEVEL = 0.09
+/** About 16 frames a second, quick enough to read as talking without flickering. */
+const FRAME_INTERVAL_MS = 60
+
 /**
- * Lays the LemonSlice video over the static portrait while a session is live.
+ * Swaps between the character's mouth frames with the loudness of the voice playing.
+ * All frames stay mounted and only opacity changes, so switching never flashes.
+ */
+const MouthSpriteOverlay = ({ sprites, radius }: { sprites: MouthSpriteSet; radius: number }) => {
+    const [shown, setShown] = useState<MouthSlot>('closed')
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            const level = PcmStreamPlayer.currentLevel()
+            const next: MouthSlot =
+                level >= OPEN_LEVEL ? 'open' : level >= HALF_OPEN_LEVEL ? 'half' : 'closed'
+            setShown((current) => (current === next ? current : next))
+        }, FRAME_INTERVAL_MS)
+        return () => clearInterval(timer)
+    }, [])
+
+    return (
+        <View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFill, { borderRadius: radius, overflow: 'hidden' }]}>
+            {MOUTH_SLOTS.map((slot) => (
+                <Image
+                    key={slot}
+                    source={{ uri: sprites[slot] }}
+                    contentFit="cover"
+                    style={[StyleSheet.absoluteFill, { opacity: shown === slot ? 1 : 0 }]}
+                />
+            ))}
+        </View>
+    )
+}
+
+/**
+ * Animates the portrait while the character talks: the LemonSlice video when a session
+ * is live, otherwise the character's bound mouth frames when image lip sync is on.
  * The portrait stays underneath and keeps the layout's size, and the video stays
  * invisible until frames arrive, so there is no blank gap while it joins.
  */
@@ -27,6 +76,8 @@ const LipSyncPortrait: React.FC<LipSyncPortraitProps> = ({ children, style, radi
             dailyUrl: state.dailyUrl,
         }))
     )
+    const characterId = Characters.useCharacterStore((state) => state.id)
+    const sprites = useActiveMouthSprites(characterId)
     const [readyFor, setReadyFor] = useState('')
 
     const live = enabled && connection === 'connected' && !!viewerToken && !!dailyUrl
@@ -55,6 +106,7 @@ const LipSyncPortrait: React.FC<LipSyncPortraitProps> = ({ children, style, radi
     return (
         <View style={style}>
             {children}
+            {!live && sprites && <MouthSpriteOverlay sprites={sprites} radius={radius} />}
             {live && (
                 <View
                     pointerEvents="none"

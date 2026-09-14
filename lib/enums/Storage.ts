@@ -19,4 +19,5 @@ export enum Storage {
     LiteLLMModels = 'litellm-models-storage',
     LemonSlice = 'lemonslice-storage',
     SpriteLipSync = 'sprite-lipsync-storage',
+    MouthSprites = 'mouth-sprites-storage',
 }

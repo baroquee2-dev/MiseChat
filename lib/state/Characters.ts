@@ -33,6 +33,7 @@ import {
 } from 'db/schema'
 
 import { Logger } from './Logger'
+import { deleteMouthSprites } from './MouthSprites'
 import { createMMKVStorage } from '../storage/MMKV'
 
 export type CharInfo = {
@@ -667,6 +668,7 @@ export namespace Characters {
                 })
                 if (data?.image_id) deleteImage(data.image_id)
                 if (data?.background_image) deleteImage(data.background_image)
+                deleteMouthSprites(charID)
 
                 await database.delete(characters).where(eq(characters.id, charID))
                 await database

@@ -9,6 +9,7 @@ import ThemedButton from '@components/buttons/ThemedButton'
 import ThemedSwitch from '@components/input/ThemedSwitch'
 import ThemedTextInput from '@components/input/ThemedTextInput'
 import HeaderTitle from '@components/views/HeaderTitle'
+import MouthSpriteSettings from '@components/views/MouthSpriteSettings'
 import { useGeminiApiKey } from '@lib/engine/API/GeminiKey'
 import {
     connectLipSync,
@@ -20,6 +21,7 @@ import { getLipSyncVoiceIssue, providerLabel } from '@lib/lemonslice/LipSyncVoic
 import { Characters } from '@lib/state/Characters'
 import { useLipSyncSession, useLipSyncSettings } from '@lib/state/LemonSlice'
 import { Logger } from '@lib/state/Logger'
+import { useMouthSprites } from '@lib/state/MouthSprites'
 import { useTTSStore } from '@lib/state/TTS'
 import { Theme } from '@lib/theme/ThemeManager'
 
@@ -71,6 +73,8 @@ const LemonSliceScreen = () => {
     const handleToggle = (value: boolean) => {
         settings.setEnabled(value)
         if (!value) disconnectLipSync('feature disabled')
+        // Only one kind of lip sync can drive the portrait at a time.
+        else useMouthSprites.getState().setEnabled(false)
     }
 
     const handleConnect = async () => {
@@ -198,6 +202,9 @@ const LemonSliceScreen = () => {
                         )}
                     </>
                 )}
+
+                <View style={styles.divider} />
+                <MouthSpriteSettings />
             </KeyboardAwareScrollView>
         </SafeAreaView>
     )
@@ -234,5 +241,6 @@ const useStyles = () => {
         row: { flexDirection: 'row', alignItems: 'center', columnGap: spacing.m },
         status: { fontSize: fontSize.s, fontWeight: '600' },
         meter: { color: color.text._300, fontSize: fontSize.s, fontFamily: 'monospace' },
+        divider: { height: 1, backgroundColor: color.neutral._300 },
     })
 }

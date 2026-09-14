@@ -29,6 +29,16 @@ type LevelSegment = {
  * audio is enqueued, so a slow network causes a gap rather than an early stop.
  */
 export class PcmStreamPlayer {
+    /** Players still producing sound, so a portrait can follow whichever voice is speaking. */
+    private static readonly active = new Set<PcmStreamPlayer>()
+
+    /** Loudest level among streamed speech playing right now; 0 when nothing is. */
+    static currentLevel(): number {
+        let loudest = 0
+        for (const player of PcmStreamPlayer.active) loudest = Math.max(loudest, player.level())
+        return loudest
+    }
+
     readonly done: Promise<void>
 
     private readonly context: AudioContext
@@ -71,6 +81,7 @@ export class PcmStreamPlayer {
             this.queued--
             if (this.ended && this.queued <= 0) this.finish()
         }
+        PcmStreamPlayer.active.add(this)
     }
 
     /** Appends raw little-endian PCM16 bytes as they arrive. */
@@ -194,6 +205,7 @@ export class PcmStreamPlayer {
     private finish() {
         if (this.finished) return
         this.finished = true
+        PcmStreamPlayer.active.delete(this)
         this.source.onBufferEnded = null
         this.segments = []
         this.context.close().catch(() => {
