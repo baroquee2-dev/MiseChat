@@ -106,6 +106,17 @@ module.exports = {
             ],
             'expo-localization',
             'expo-audio',
+            [
+                // Used only for in-app streaming TTS playback, so none of the
+                // background-audio machinery or the FFmpeg decoders are needed.
+                'react-native-audio-api',
+                {
+                    iosBackgroundMode: false,
+                    androidForegroundService: false,
+                    androidPermissions: [],
+                    disableFFmpeg: true,
+                },
+            ],
             'expo-router',
             'expo-font',
             'expo-image',

@@ -1,0 +1,19 @@
+diff --git a/node_modules/react-native-audio-api/android/build.gradle b/node_modules/react-native-audio-api/android/build.gradle
+index 0033a2b..f03c413 100644
+--- a/node_modules/react-native-audio-api/android/build.gradle
++++ b/node_modules/react-native-audio-api/android/build.gradle
+@@ -320,6 +320,14 @@ def assertMinimalReactNativeVersion = task assertMinimalReactNativeVersionTask {
+ task downloadPrebuiltBinaries(type: Exec) {
+   def isWindows = Os.isFamily(Os.FAMILY_WINDOWS)
+   if (isWindows) {
++    // A default Git for Windows install only puts Git\cmd on PATH, so the script's
++    // mkdir/rm/unzip are missing unless Git's Unix tools are added here. Windows shells
++    // usually name the variable "Path"; adding a separate "PATH" leaves two entries and
++    // the child may keep the old one, so every spelling is replaced by a single entry.
++    def pathKeys = environment.keySet().findAll { it.equalsIgnoreCase('PATH') }
++    def inheritedPath = pathKeys ? environment[pathKeys[0]] : ''
++    pathKeys.each { environment.remove(it) }
++    environment 'PATH', "C:\\Program Files\\Git\\usr\\bin;C:\\Program Files\\Git\\mingw64\\bin;${inheritedPath}"
+     commandLine 'C:\\Program Files\\Git\\usr\\bin\\bash.exe', '../scripts/download-prebuilt-binaries.sh', 'android', isFFmpegDisabled() ? 'skipffmpeg' : ''
+   } else {
+     commandLine 'chmod', '+x', '../scripts/download-prebuilt-binaries.sh'

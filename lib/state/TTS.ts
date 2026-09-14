@@ -1,12 +1,14 @@
+import { fetch as streamingFetch } from 'expo/fetch'
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio'
 import { File, Paths } from 'expo-file-system'
 import * as Speech from 'expo-speech'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { useShallow } from 'zustand/react/shallow'
-import i18n from '@lib/i18n'
 
+import { PcmStreamPlayer } from '@lib/audio/PcmStreamPlayer'
 import { Storage } from '@lib/enums/Storage'
+import i18n from '@lib/i18n'
 import { isLipSyncVoicing } from '@lib/state/LemonSlice'
 import { Logger } from '@lib/state/Logger'
 import { createMMKVStorage } from '@lib/storage/MMKV'
@@ -592,7 +594,7 @@ const queueElevenLabsSpeech = (
     return elevenLabsQueue
 }
 
-const playElevenLabsSpeech = async (
+const playElevenLabsFile = async (
     text: string,
     apiKey: string,
     voiceId: string,
@@ -640,6 +642,61 @@ const playElevenLabsSpeech = async (
         }, 200)
         player.play()
     })
+}
+
+/** Raw PCM can be played while the response is still arriving; mp3 has to be complete first. */
+const STREAM_SAMPLE_RATE = 24000
+
+const isAbort = (error: unknown) => error instanceof Error && error.name === 'AbortError'
+
+const playElevenLabsSpeech = async (
+    text: string,
+    apiKey: string,
+    voiceId: string,
+    model: string,
+    rate: number
+): Promise<void> => {
+    const controller = new AbortController()
+    elevenLabsAbortController = controller
+    const response = await streamingFetch(
+        `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}/stream?output_format=pcm_${STREAM_SAMPLE_RATE}`,
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'xi-api-key': apiKey },
+            body: JSON.stringify({ text: text, model_id: model }),
+            signal: controller.signal,
+        }
+    )
+    if (response.status === 401) {
+        const detail = await response.text()
+        throw new Error(detail || 'ElevenLabs rejected the API key')
+    }
+    if (!response.ok || !response.body) {
+        // PCM output can be gated by subscription tier; mp3 file playback still works there.
+        const detail = await response.text().catch(() => '')
+        Logger.warn(
+            `ElevenLabs streaming unavailable (${response.status}), using file playback: ${detail.slice(0, 160)}`
+        )
+        return playElevenLabsFile(text, apiKey, voiceId, model, rate)
+    }
+
+    const player = new PcmStreamPlayer(STREAM_SAMPLE_RATE, Math.min(rate, 2))
+    const finish = () => player.stop()
+    finishElevenLabsPlayback = finish
+    const reader = response.body.getReader()
+    try {
+        for (;;) {
+            const { done, value } = await reader.read()
+            if (done) break
+            if (value) player.push(value)
+        }
+        player.end()
+    } catch (error) {
+        player.stop()
+        if (!isAbort(error)) throw error
+    }
+    await player.done
+    if (finishElevenLabsPlayback === finish) finishElevenLabsPlayback = undefined
 }
 
 const getElevenLabsError = (error: unknown) => {
@@ -762,11 +819,14 @@ let cartesiaAbortController: AbortController | undefined
 let cartesiaQueue = Promise.resolve()
 let cartesiaGeneration = 0
 let finishCartesiaPlayback: (() => void) | undefined
+let cartesiaSocket: WebSocket | undefined
 
 const stopCartesiaPlayback = () => {
     cartesiaGeneration += 1
     cartesiaAbortController?.abort()
     cartesiaAbortController = undefined
+    cartesiaSocket?.close()
+    cartesiaSocket = undefined
     cartesiaPlayer?.pause()
     finishCartesiaPlayback?.()
     finishCartesiaPlayback = undefined
@@ -794,7 +854,7 @@ const queueCartesiaSpeech = (
 
 const getCartesiaSpeechSpeed = (rate: number) => Math.min(1.5, Math.max(0.6, rate))
 
-const playCartesiaSpeech = async (
+const playCartesiaFile = async (
     text: string,
     apiKey: string,
     voiceId: string,
@@ -859,6 +919,118 @@ const playCartesiaSpeech = async (
         }, 200)
         player.play()
     })
+}
+
+/**
+ * Cartesia's HTTP endpoint is not documented as progressive, but its WebSocket is:
+ * audio arrives as base64 PCM chunks while the rest is still being synthesised.
+ */
+const playCartesiaSpeech = async (
+    text: string,
+    apiKey: string,
+    voiceId: string,
+    model: string,
+    language: string,
+    rate: number
+): Promise<void> => {
+    const speechSpeed = getCartesiaSpeechSpeed(rate)
+    // Beyond Cartesia's own speed range the remainder is applied at playback, as before.
+    const playbackBoost = rate > speechSpeed ? Math.min(rate / speechSpeed, 2) : 1
+    const generation = cartesiaGeneration
+    const player = new PcmStreamPlayer(STREAM_SAMPLE_RATE, playbackBoost)
+    const contextId = `misechat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    let receivedAudio = false
+
+    const outcome = await new Promise<'played' | 'unavailable'>((resolve, reject) => {
+        let settled = false
+        const settle = (action: () => void) => {
+            if (settled) return
+            settled = true
+            action()
+        }
+
+        const socket = new WebSocket(
+            `wss://api.cartesia.ai/tts/websocket?cartesia_version=2026-08-14&api_key=${encodeURIComponent(apiKey)}`
+        )
+        cartesiaSocket = socket
+        finishCartesiaPlayback = () => {
+            player.stop()
+            socket.close()
+            settle(() => resolve('played'))
+        }
+
+        socket.onopen = () => {
+            socket.send(
+                JSON.stringify({
+                    model_id: model,
+                    transcript: text,
+                    voice: voiceId,
+                    language: language,
+                    context_id: contextId,
+                    continue: false,
+                    output_format: {
+                        container: 'raw',
+                        encoding: 'pcm_s16le',
+                        sample_rate: STREAM_SAMPLE_RATE,
+                    },
+                    generation_config: { speed: speechSpeed },
+                })
+            )
+        }
+        socket.onmessage = (event) => {
+            let message: {
+                type?: string
+                data?: string
+                done?: boolean
+                message?: string
+                title?: string
+            }
+            try {
+                message = JSON.parse(String(event.data))
+            } catch {
+                return
+            }
+            if (message.type === 'error') {
+                player.stop()
+                socket.close()
+                settle(() => reject(new Error(message.message || message.title || 'stream error')))
+                return
+            }
+            if (message.type === 'chunk' && message.data) {
+                receivedAudio = true
+                player.push(base64ToBytes(message.data))
+            }
+            if (message.type === 'done' || message.done) {
+                player.end()
+                socket.close()
+                settle(() => resolve('played'))
+            }
+        }
+        // Failing before any audio usually means WebSockets are blocked on this network,
+        // so file playback is tried instead; failing mid-reply just ends what was heard.
+        socket.onerror = () => {
+            if (!receivedAudio) settle(() => resolve('unavailable'))
+        }
+        socket.onclose = () => {
+            if (!receivedAudio) {
+                settle(() => resolve('unavailable'))
+                return
+            }
+            player.end()
+            settle(() => resolve('played'))
+        }
+    })
+
+    if (cartesiaSocket?.readyState !== WebSocket.OPEN) cartesiaSocket = undefined
+    if (outcome === 'unavailable') {
+        player.stop()
+        // Stopped by the user before audio arrived; that is not a reason to retry over HTTP.
+        if (generation !== cartesiaGeneration) return
+        Logger.warn('Cartesia streaming unavailable, using file playback')
+        return playCartesiaFile(text, apiKey, voiceId, model, language, rate)
+    }
+    await player.done
+    finishCartesiaPlayback = undefined
 }
 
 const getCartesiaError = (error: unknown) => {
