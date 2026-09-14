@@ -9,6 +9,7 @@ import ThemedButton from '@components/buttons/ThemedButton'
 import ThemedSwitch from '@components/input/ThemedSwitch'
 import ThemedTextInput from '@components/input/ThemedTextInput'
 import HeaderTitle from '@components/views/HeaderTitle'
+import { useGeminiApiKey } from '@lib/engine/API/GeminiKey'
 import {
     connectLipSync,
     COST_PER_MINUTE_USD,
@@ -53,11 +54,11 @@ const LemonSliceScreen = () => {
         useShallow((state) => ({
             provider: state.provider,
             elevenLabsApiKey: state.elevenLabsApiKey,
-            geminiApiKey: state.geminiApiKey,
             cartesiaApiKey: state.cartesiaApiKey,
         }))
     )
-    const voiceIssue = getLipSyncVoiceIssue(voice)
+    const geminiApiKey = useGeminiApiKey()
+    const voiceIssue = getLipSyncVoiceIssue(voice, geminiApiKey)
     const voiceName = providerLabel(voice.provider)
     const [now, setNow] = useState(() => Date.now())
 
@@ -161,7 +162,9 @@ const LemonSliceScreen = () => {
                             {voiceIssue === 'unsupported'
                                 ? t('lemonSlice.deviceUnsupported')
                                 : voiceIssue === 'missingKey'
-                                  ? t('lemonSlice.missingVoiceKey', { provider: voiceName })
+                                  ? voice.provider === 'gemini'
+                                      ? t('lemonSlice.missingGeminiKey')
+                                      : t('lemonSlice.missingVoiceKey', { provider: voiceName })
                                   : t('lemonSlice.voiceNote', { provider: voiceName }) +
                                     (voice.provider === 'elevenlabs'
                                         ? t('lemonSlice.elevenLabsPlan')

@@ -1,7 +1,7 @@
 import * as Speech from 'expo-speech'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { View } from 'react-native'
+import { Text, View } from 'react-native'
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
 
 import ThemedButton from '@components/buttons/ThemedButton'
@@ -11,6 +11,7 @@ import ThemedSwitch from '@components/input/ThemedSwitch'
 import ThemedTextInput from '@components/input/ThemedTextInput'
 import SectionTitle from '@components/text/SectionTitle'
 import HeaderTitle from '@components/views/HeaderTitle'
+import { useGeminiApiKey } from '@lib/engine/API/GeminiKey'
 import i18n from '@lib/i18n'
 import { Logger } from '@lib/state/Logger'
 import { useTTS, type TTSProvider } from '@lib/state/TTS'
@@ -129,7 +130,7 @@ const fallbackCartesiaVoices: CartesiaVoice[] = [
 
 const TTSManagerScreen = () => {
     const { t } = useTranslation()
-    const { color } = Theme.useTheme()
+    const { color, spacing, fontSize, borderRadius } = Theme.useTheme()
     const {
         voice,
         setVoice,
@@ -149,8 +150,6 @@ const TTSManagerScreen = () => {
         setElevenLabsVoiceId,
         elevenLabsModel,
         setElevenLabsModel,
-        geminiApiKey,
-        setGeminiApiKey,
         geminiVoiceName,
         setGeminiVoiceName,
         geminiModel,
@@ -166,6 +165,7 @@ const TTSManagerScreen = () => {
         startTTS,
         stopTTS,
     } = useTTS()
+    const geminiApiKey = useGeminiApiKey()
     const [lang, setLang] = useState(voice?.language ?? 'en-US')
     const [modelList, setModelList] = useState<Speech.Voice[]>([])
     const languageList: LanguageListItem = groupBy(modelList, 'language')
@@ -450,15 +450,26 @@ const TTSManagerScreen = () => {
 
             {provider === 'gemini' && (
                 <>
-                    <ThemedTextInput
-                        label={t('tts.geminiApiKey')}
-                        value={geminiApiKey}
-                        onChangeText={setGeminiApiKey}
-                        secureTextEntry
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        placeholder="AIza..."
-                    />
+                    <View
+                        style={{
+                            borderRadius: borderRadius.m,
+                            borderLeftWidth: 3,
+                            borderLeftColor: geminiApiKey ? color.text._400 : color.error._400,
+                            backgroundColor: color.neutral._200,
+                            padding: spacing.m,
+                            rowGap: spacing.xs,
+                        }}>
+                        <Text style={{ color: color.text._200, fontSize: fontSize.s }}>
+                            {t('tts.geminiKeyFromApi')}
+                        </Text>
+                        <Text
+                            style={{
+                                color: geminiApiKey ? color.text._400 : color.error._400,
+                                fontSize: fontSize.s,
+                            }}>
+                            {geminiApiKey ? t('tts.geminiKeyFound') : t('tts.geminiKeyMissing')}
+                        </Text>
+                    </View>
                     <SectionTitle>{t('tts.geminiVoice')}</SectionTitle>
                     <DropdownSheet
                         search

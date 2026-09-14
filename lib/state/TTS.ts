@@ -7,6 +7,7 @@ import { persist } from 'zustand/middleware'
 import { useShallow } from 'zustand/react/shallow'
 
 import { PcmStreamPlayer } from '@lib/audio/PcmStreamPlayer'
+import { getGeminiApiKey } from '@lib/engine/API/GeminiKey'
 import { Storage } from '@lib/enums/Storage'
 import i18n from '@lib/i18n'
 import { isLipSyncVoicing } from '@lib/state/LemonSlice'
@@ -27,7 +28,6 @@ type TTSState = {
     elevenLabsApiKey: string
     elevenLabsVoiceId: string
     elevenLabsModel: string
-    geminiApiKey: string
     geminiVoiceName: string
     geminiModel: string
     cartesiaApiKey: string
@@ -44,7 +44,6 @@ type TTSState = {
     setElevenLabsApiKey: (apiKey: string) => void
     setElevenLabsVoiceId: (voiceId: string) => void
     setElevenLabsModel: (model: string) => void
-    setGeminiApiKey: (apiKey: string) => void
     setGeminiVoiceName: (voiceName: string) => void
     setGeminiModel: (model: string) => void
     setCartesiaApiKey: (apiKey: string) => void
@@ -95,10 +94,8 @@ export const useTTS = () => {
         setElevenLabsApiKey,
         setElevenLabsVoiceId,
         setElevenLabsModel,
-        geminiApiKey,
         geminiVoiceName,
         geminiModel,
-        setGeminiApiKey,
         setGeminiVoiceName,
         setGeminiModel,
         cartesiaApiKey,
@@ -132,10 +129,8 @@ export const useTTS = () => {
             setElevenLabsApiKey: state.setElevenLabsApiKey,
             setElevenLabsVoiceId: state.setElevenLabsVoiceId,
             setElevenLabsModel: state.setElevenLabsModel,
-            geminiApiKey: state.geminiApiKey,
             geminiVoiceName: state.geminiVoiceName,
             geminiModel: state.geminiModel,
-            setGeminiApiKey: state.setGeminiApiKey,
             setGeminiVoiceName: state.setGeminiVoiceName,
             setGeminiModel: state.setGeminiModel,
             cartesiaApiKey: state.cartesiaApiKey,
@@ -170,10 +165,8 @@ export const useTTS = () => {
         setElevenLabsApiKey,
         setElevenLabsVoiceId,
         setElevenLabsModel,
-        geminiApiKey,
         geminiVoiceName,
         geminiModel,
-        setGeminiApiKey,
         setGeminiVoiceName,
         setGeminiModel,
         cartesiaApiKey,
@@ -217,7 +210,6 @@ export const useTTSStore = create<TTSState>()(
             // Rachel is an ElevenLabs premade voice. Users may replace this with any Voice ID.
             elevenLabsVoiceId: '21m00Tcm4TlvDq8ikWAM',
             elevenLabsModel: 'eleven_v3',
-            geminiApiKey: '',
             geminiVoiceName: 'Kore',
             geminiModel: 'gemini-3.1-flash-tts-preview',
             cartesiaApiKey: '',
@@ -257,7 +249,8 @@ export const useTTSStore = create<TTSState>()(
                     return
                 }
                 if (get().provider === 'gemini') {
-                    if (!get().geminiApiKey.trim()) {
+                    const geminiApiKey = getGeminiApiKey()
+                    if (!geminiApiKey) {
                         Logger.errorToast(i18n.t('toast.enterGeminiKey'))
                         clearIndex()
                         return
@@ -267,7 +260,7 @@ export const useTTSStore = create<TTSState>()(
                     try {
                         await queueGeminiSpeech(
                             text,
-                            get().geminiApiKey,
+                            geminiApiKey,
                             get().geminiVoiceName,
                             get().geminiModel,
                             get().rate
@@ -370,9 +363,6 @@ export const useTTSStore = create<TTSState>()(
             setElevenLabsModel: (elevenLabsModel) => {
                 set({ elevenLabsModel })
             },
-            setGeminiApiKey: (geminiApiKey) => {
-                set({ geminiApiKey })
-            },
             setGeminiVoiceName: (geminiVoiceName) => {
                 set({ geminiVoiceName })
             },
@@ -420,8 +410,9 @@ export const useTTSStore = create<TTSState>()(
                     return
                 }
                 if (get().provider === 'gemini') {
-                    const { geminiApiKey, geminiVoiceName, geminiModel, rate } = get()
-                    if (!geminiApiKey.trim()) {
+                    const { geminiVoiceName, geminiModel, rate } = get()
+                    const geminiApiKey = getGeminiApiKey()
+                    if (!geminiApiKey) {
                         Logger.errorToast(i18n.t('toast.enterGeminiKey'))
                         onStop()
                         return
@@ -548,7 +539,6 @@ export const useTTSStore = create<TTSState>()(
                 elevenLabsApiKey: state.elevenLabsApiKey,
                 elevenLabsVoiceId: state.elevenLabsVoiceId,
                 elevenLabsModel: state.elevenLabsModel,
-                geminiApiKey: state.geminiApiKey,
                 geminiVoiceName: state.geminiVoiceName,
                 geminiModel: state.geminiModel,
                 cartesiaApiKey: state.cartesiaApiKey,

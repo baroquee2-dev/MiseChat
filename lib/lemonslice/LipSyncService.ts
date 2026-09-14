@@ -113,7 +113,9 @@ export const connectLipSync = async () => {
     if (voiceIssue === 'unsupported') throw new Error(i18n.t('lemonSlice.deviceUnsupported'))
     if (voiceIssue === 'missingKey')
         throw new Error(
-            i18n.t('lemonSlice.missingVoiceKey', { provider: providerLabel(tts.provider) })
+            tts.provider === 'gemini'
+                ? i18n.t('lemonSlice.missingGeminiKey')
+                : i18n.t('lemonSlice.missingVoiceKey', { provider: providerLabel(tts.provider) })
         )
 
     const mine = ++attempt

@@ -1,3 +1,4 @@
+import { getGeminiApiKey } from '@lib/engine/API/GeminiKey'
 import i18n from '@lib/i18n'
 import type { TTSProvider } from '@lib/state/TTS'
 
@@ -8,7 +9,6 @@ export type LipSyncVoiceSettings = {
     elevenLabsApiKey: string
     elevenLabsVoiceId: string
     elevenLabsModel: string
-    geminiApiKey: string
     geminiVoiceName: string
     geminiModel: string
     cartesiaApiKey: string
@@ -43,16 +43,15 @@ export const providerLabel = (provider: TTSProvider) => {
  * never exposes its samples, so it is the one provider that cannot drive it.
  */
 export const getLipSyncVoiceIssue = (
-    voice: Pick<
-        LipSyncVoiceSettings,
-        'provider' | 'elevenLabsApiKey' | 'geminiApiKey' | 'cartesiaApiKey'
-    >
+    voice: Pick<LipSyncVoiceSettings, 'provider' | 'elevenLabsApiKey' | 'cartesiaApiKey'>,
+    /** Gemini's key lives in API settings; screens pass it in so they re-render when it changes. */
+    geminiApiKey: string = getGeminiApiKey()
 ): LipSyncVoiceIssue => {
     switch (voice.provider) {
         case 'elevenlabs':
             return voice.elevenLabsApiKey.trim() ? null : 'missingKey'
         case 'gemini':
-            return voice.geminiApiKey.trim() ? null : 'missingKey'
+            return geminiApiKey ? null : 'missingKey'
         case 'cartesia':
             return voice.cartesiaApiKey.trim() ? null : 'missingKey'
         default:
@@ -102,7 +101,7 @@ const synthesizeGemini = async (text: string, voice: LipSyncVoiceSettings): Prom
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'x-goog-api-key': voice.geminiApiKey.trim(),
+                'x-goog-api-key': getGeminiApiKey(),
             },
             body: JSON.stringify({
                 contents: [{ parts: [{ text: text }] }],
