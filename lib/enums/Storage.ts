@@ -18,4 +18,5 @@ export enum Storage {
     Language = 'language-storage',
     LiteLLMModels = 'litellm-models-storage',
     LemonSlice = 'lemonslice-storage',
+    SpriteLipSync = 'sprite-lipsync-storage',
 }

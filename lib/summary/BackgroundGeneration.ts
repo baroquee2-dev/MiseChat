@@ -15,6 +15,8 @@ export type BackgroundPrompt = {
     system: string
     user: string
     maxTokens: number
+    /** Defaults low, since most background jobs extract rather than write. */
+    temperature?: number
     /** Shown in warning logs so a failure points at the feature that caused it. */
     label: string
 }
@@ -108,7 +110,7 @@ const generateRemote = async (prompt: BackgroundPrompt) => {
     const samplers = {
         ...SamplersManager.getCurrentSampler(),
         [SamplerID.GENERATED_LENGTH]: prompt.maxTokens,
-        [SamplerID.TEMPERATURE]: 0.2,
+        [SamplerID.TEMPERATURE]: prompt.temperature ?? 0.2,
         // Reasoning models otherwise inherit whatever effort the user's active
         // sampler preset has, which can silently consume the entire
         // generated-length budget on hidden reasoning and leave nothing for

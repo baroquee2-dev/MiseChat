@@ -119,6 +119,11 @@ const getPaths = (remote: boolean): ButtonData[] => [
         icon: 'video-camera',
     },
     {
+        nameKey: 'nav.spriteLipSync',
+        path: '/screens/SpriteLipSyncScreen' as Href,
+        icon: 'smile',
+    },
+    {
         nameKey: 'nav.logs',
         path: '/screens/LogsScreen',
         icon: 'code',
