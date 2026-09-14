@@ -1,5 +1,6 @@
 import { AppState } from 'react-native'
 
+import { createFirstAudioLogger, isAbort } from '@lib/audio/SpeechStreams'
 import i18n from '@lib/i18n'
 import { Characters } from '@lib/state/Characters'
 import { Chats, useInference } from '@lib/state/Chat'
@@ -14,7 +15,7 @@ import {
     mintDailyToken,
     prepareImageBase64,
 } from './LemonSliceApi'
-import { getLipSyncVoiceIssue, providerLabel, synthesizeForLipSync } from './LipSyncVoice'
+import { getLipSyncVoiceIssue, providerLabel, streamForLipSync } from './LipSyncVoice'
 
 /** LemonSlice bills wall-clock session time, so a forgotten session keeps charging. */
 export const IDLE_LIMIT_MS = 50_000
@@ -26,6 +27,8 @@ let idleTimer: ReturnType<typeof setInterval> | null = null
 let attempt = 0
 /** When the current line should finish; a lost playback_finished must not pin the session open. */
 let speakingUntil = 0
+/** The reply currently streaming to the avatar, so a newer reply or a disconnect can cancel it. */
+let speech: AbortController | null = null
 
 const log = (message: string) => Logger.info(`[lipsync] ${message}`)
 
@@ -67,6 +70,8 @@ const stopIdleTimer = () => {
 const resetSession = (connection: 'idle' | 'error' = 'idle') => {
     stopIdleTimer()
     clearBackgroundWatch()
+    speech?.abort()
+    speech = null
     speakingUntil = 0
     useLipSyncSession.setState({ connection: connection, viewerToken: '', connectedAt: null })
 }
@@ -192,36 +197,81 @@ const speak = async (text: string) => {
     const speakable = toSpeakable(text)
     if (!ws || !speakable) return
 
-    const tts = useTTSStore.getState()
-    try {
-        const { pcm, sampleRate } = await synthesizeForLipSync(speakable, tts)
-        // The session may have ended while the voice was being synthesised.
-        if (socket !== ws || ws.readyState !== WebSocket.OPEN) return
+    // A newer reply takes over from one still streaming.
+    speech?.abort()
+    const controller = new AbortController()
+    speech = controller
 
-        if (Date.now() < speakingUntil) ws.send(JSON.stringify({ command: 'interrupt' }))
-        // Drop a trailing odd byte so every PCM16 sample stays whole.
-        const usable = pcm.length - (pcm.length % 2)
-        const chunkBytes = chunkBytesFor(sampleRate)
-        for (let offset = 0; offset < usable; offset += chunkBytes) {
-            ws.send(
-                JSON.stringify({
-                    command: 'audio',
-                    audio: encodeBase64(
-                        pcm.subarray(offset, Math.min(offset + chunkBytes, usable))
-                    ),
-                    sampleRate: sampleRate,
-                    encoding: 'PCM16',
-                })
-            )
+    const tts = useTTSStore.getState()
+    const logFirstAudio = createFirstAudioLogger(`[lipsync] ${providerLabel(tts.provider)}`)
+    const isCurrent = () =>
+        speech === controller && socket === ws && ws.readyState === WebSocket.OPEN
+    const line = { started: false, startedAt: 0, durationMs: 0, sampleRate: 0 }
+    let pending = new Uint8Array(0)
+
+    const send = (bytes: Uint8Array, sampleRate: number) => {
+        ws.send(
+            JSON.stringify({
+                command: 'audio',
+                audio: encodeBase64(bytes),
+                sampleRate: sampleRate,
+                encoding: 'PCM16',
+            })
+        )
+        line.durationMs += (bytes.length / (sampleRate * 2)) * 1000
+        speakingUntil = line.startedAt + line.durationMs + 3000
+    }
+
+    // Audio is forwarded as it arrives, so the avatar starts talking before the reply is fully synthesised.
+    const onPcm = (pcm: Uint8Array, sampleRate: number) => {
+        // The session ended or a newer reply took over; stop pulling audio for this one.
+        if (!isCurrent()) {
+            controller.abort()
+            return
         }
+        logFirstAudio()
+        if (!line.started) {
+            line.started = true
+            if (Date.now() < speakingUntil) ws.send(JSON.stringify({ command: 'interrupt' }))
+            line.startedAt = Date.now()
+        }
+        line.sampleRate = sampleRate
+
+        const merged = new Uint8Array(pending.length + pcm.length)
+        merged.set(pending)
+        merged.set(pcm, pending.length)
+        const chunkBytes = chunkBytesFor(sampleRate)
+        let offset = 0
+        for (; offset + chunkBytes <= merged.length; offset += chunkBytes) {
+            send(merged.subarray(offset, offset + chunkBytes), sampleRate)
+        }
+        pending = merged.slice(offset)
+    }
+
+    const finishLine = () => {
+        if (!line.started || !isCurrent()) return
+        // Drop a trailing odd byte so every PCM16 sample stays whole.
+        const usable = pending.length - (pending.length % 2)
+        if (usable) send(pending.subarray(0, usable), line.sampleRate)
         // Without audio_end the tail is dropped and the avatar freezes.
         ws.send(JSON.stringify({ command: 'audio_end' }))
+    }
 
-        const durationMs = (usable / (sampleRate * 2)) * 1000
-        speakingUntil = Date.now() + durationMs + 3000
-        log(`speaking ${(durationMs / 1000).toFixed(1)}s via ${tts.provider} @ ${sampleRate}Hz`)
+    try {
+        await streamForLipSync(speakable, tts, controller.signal, onPcm)
+        finishLine()
+        if (line.started) {
+            log(
+                `spoke ${(line.durationMs / 1000).toFixed(1)}s via ${tts.provider} @ ${line.sampleRate}Hz`
+            )
+        }
     } catch (error) {
+        if (isAbort(error)) return
+        // Close out what was already sent so the avatar does not freeze mid-word.
+        finishLine()
         Logger.warn(`[lipsync] speech failed: ${error}`)
+    } finally {
+        if (speech === controller) speech = null
     }
 }
 
