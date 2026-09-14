@@ -15,6 +15,7 @@ import {
     disconnectLipSync,
     IDLE_LIMIT_MS,
 } from '@lib/lemonslice/LipSyncService'
+import { getLipSyncVoiceIssue, providerLabel } from '@lib/lemonslice/LipSyncVoice'
 import { Characters } from '@lib/state/Characters'
 import { useLipSyncSession, useLipSyncSettings } from '@lib/state/LemonSlice'
 import { Logger } from '@lib/state/Logger'
@@ -48,7 +49,16 @@ const LemonSliceScreen = () => {
         }))
     )
     const characterName = Characters.useCharacterStore((state) => state.card?.name)
-    const hasElevenLabs = useTTSStore((state) => !!state.elevenLabsApiKey.trim())
+    const voice = useTTSStore(
+        useShallow((state) => ({
+            provider: state.provider,
+            elevenLabsApiKey: state.elevenLabsApiKey,
+            geminiApiKey: state.geminiApiKey,
+            cartesiaApiKey: state.cartesiaApiKey,
+        }))
+    )
+    const voiceIssue = getLipSyncVoiceIssue(voice)
+    const voiceName = providerLabel(voice.provider)
     const [now, setNow] = useState(() => Date.now())
 
     useEffect(() => {
@@ -147,10 +157,15 @@ const LemonSliceScreen = () => {
                                 ? t('lemonSlice.character', { name: characterName })
                                 : t('lemonSlice.noCharacter')}
                         </Text>
-                        <Text style={[styles.hint, !hasElevenLabs && { color: color.error._400 }]}>
-                            {hasElevenLabs
-                                ? t('lemonSlice.voiceNote')
-                                : t('lemonSlice.missingElevenLabs')}
+                        <Text style={[styles.hint, !!voiceIssue && { color: color.error._400 }]}>
+                            {voiceIssue === 'unsupported'
+                                ? t('lemonSlice.deviceUnsupported')
+                                : voiceIssue === 'missingKey'
+                                  ? t('lemonSlice.missingVoiceKey', { provider: voiceName })
+                                  : t('lemonSlice.voiceNote', { provider: voiceName }) +
+                                    (voice.provider === 'elevenlabs'
+                                        ? t('lemonSlice.elevenLabsPlan')
+                                        : '')}
                         </Text>
                         <Text style={styles.hint}>{t('lemonSlice.layoutNote')}</Text>
 

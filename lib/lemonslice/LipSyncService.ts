@@ -8,14 +8,13 @@ import { Logger } from '@lib/state/Logger'
 import { useTTSStore } from '@lib/state/TTS'
 
 import {
-    CHUNK_BYTES,
+    chunkBytesFor,
     createSession,
     encodeBase64,
     mintDailyToken,
     prepareImageBase64,
-    SAMPLE_RATE,
-    synthesizePcm,
 } from './LemonSliceApi'
+import { getLipSyncVoiceIssue, providerLabel, synthesizeForLipSync } from './LipSyncVoice'
 
 /** LemonSlice bills wall-clock session time, so a forgotten session keeps charging. */
 export const IDLE_LIMIT_MS = 50_000
@@ -29,6 +28,23 @@ let attempt = 0
 let speakingUntil = 0
 
 const log = (message: string) => Logger.info(`[lipsync] ${message}`)
+
+const isActive = () => !!socket || useLipSyncSession.getState().connection === 'connecting'
+
+/**
+ * System overlays — the speech-recognition dialog, permission prompts — also put
+ * the app in the background on Android, so only a sustained absence ends the session.
+ */
+const BACKGROUND_GRACE_MS = 30_000
+
+let backgroundedAt: number | null = null
+let backgroundTimer: ReturnType<typeof setTimeout> | null = null
+
+const clearBackgroundWatch = () => {
+    if (backgroundTimer) clearTimeout(backgroundTimer)
+    backgroundTimer = null
+    backgroundedAt = null
+}
 
 const sendTerminate = (ws: WebSocket) => {
     try {
@@ -50,6 +66,7 @@ const stopIdleTimer = () => {
 
 const resetSession = (connection: 'idle' | 'error' = 'idle') => {
     stopIdleTimer()
+    clearBackgroundWatch()
     speakingUntil = 0
     useLipSyncSession.setState({ connection: connection, viewerToken: '', connectedAt: null })
 }
@@ -89,9 +106,15 @@ export const connectLipSync = async () => {
     if (!settings.apiKey.trim() || !settings.dailyUrl.trim() || !settings.dailyApiKey.trim())
         throw new Error(i18n.t('lemonSlice.missingKeys'))
     if (!card) throw new Error(i18n.t('lemonSlice.noCharacter'))
+
     // Checked up front: a session that cannot speak would still be billed.
-    if (!useTTSStore.getState().elevenLabsApiKey.trim())
-        throw new Error(i18n.t('lemonSlice.missingElevenLabs'))
+    const tts = useTTSStore.getState()
+    const voiceIssue = getLipSyncVoiceIssue(tts)
+    if (voiceIssue === 'unsupported') throw new Error(i18n.t('lemonSlice.deviceUnsupported'))
+    if (voiceIssue === 'missingKey')
+        throw new Error(
+            i18n.t('lemonSlice.missingVoiceKey', { provider: providerLabel(tts.provider) })
+        )
 
     const mine = ++attempt
     const dailyUrl = settings.dailyUrl.trim()
@@ -169,22 +192,22 @@ const speak = async (text: string) => {
 
     const tts = useTTSStore.getState()
     try {
-        const pcm = await synthesizePcm({
-            text: speakable,
-            apiKey: tts.elevenLabsApiKey.trim(),
-            voiceId: tts.elevenLabsVoiceId,
-            model: tts.elevenLabsModel,
-        })
-        // The session may have ended while ElevenLabs was synthesising.
+        const { pcm, sampleRate } = await synthesizeForLipSync(speakable, tts)
+        // The session may have ended while the voice was being synthesised.
         if (socket !== ws || ws.readyState !== WebSocket.OPEN) return
 
         if (Date.now() < speakingUntil) ws.send(JSON.stringify({ command: 'interrupt' }))
-        for (let offset = 0; offset < pcm.length; offset += CHUNK_BYTES) {
+        // Drop a trailing odd byte so every PCM16 sample stays whole.
+        const usable = pcm.length - (pcm.length % 2)
+        const chunkBytes = chunkBytesFor(sampleRate)
+        for (let offset = 0; offset < usable; offset += chunkBytes) {
             ws.send(
                 JSON.stringify({
                     command: 'audio',
-                    audio: encodeBase64(pcm.subarray(offset, offset + CHUNK_BYTES)),
-                    sampleRate: SAMPLE_RATE,
+                    audio: encodeBase64(
+                        pcm.subarray(offset, Math.min(offset + chunkBytes, usable))
+                    ),
+                    sampleRate: sampleRate,
                     encoding: 'PCM16',
                 })
             )
@@ -192,9 +215,9 @@ const speak = async (text: string) => {
         // Without audio_end the tail is dropped and the avatar freezes.
         ws.send(JSON.stringify({ command: 'audio_end' }))
 
-        const durationMs = (pcm.length / (SAMPLE_RATE * 2)) * 1000
+        const durationMs = (usable / (sampleRate * 2)) * 1000
         speakingUntil = Date.now() + durationMs + 3000
-        log(`speaking ${(durationMs / 1000).toFixed(1)}s`)
+        log(`speaking ${(durationMs / 1000).toFixed(1)}s via ${tts.provider} @ ${sampleRate}Hz`)
     } catch (error) {
         Logger.warn(`[lipsync] speech failed: ${error}`)
     }
@@ -213,16 +236,38 @@ useInference.subscribe((state, previous) => {
     void speak(last.swipes[last.swipe_id]?.swipe ?? '')
 })
 
+useTTSStore.subscribe((state, previous) => {
+    if (state.provider === previous.provider || !isActive()) return
+    // Device voice cannot feed the avatar, and while a session is live regular TTS
+    // is muted — staying connected would leave every reply silent.
+    if (getLipSyncVoiceIssue(state) !== 'unsupported') return
+    Logger.infoToast(i18n.t('lemonSlice.providerDisconnected'))
+    disconnectLipSync('switched to device voice')
+})
+
 Characters.useCharacterStore.subscribe((state, previous) => {
     if (state.id === previous.id) return
     // The session was built from the previous character's portrait.
-    if (socket || useLipSyncSession.getState().connection === 'connecting')
-        disconnectLipSync('character changed')
+    if (isActive()) disconnectLipSync('character changed')
 })
 
-// Backgrounding the app is the easiest way to leak a billed session.
+// Leaving the app is the easiest way to leak a billed session.
 AppState.addEventListener('change', (next) => {
-    if (next !== 'background') return
-    if (socket || useLipSyncSession.getState().connection === 'connecting')
-        disconnectLipSync('app backgrounded')
+    if (next === 'background') {
+        if (!isActive() || backgroundedAt !== null) return
+        backgroundedAt = Date.now()
+        backgroundTimer = setTimeout(() => {
+            if (isActive()) disconnectLipSync('app backgrounded')
+        }, BACKGROUND_GRACE_MS)
+        return
+    }
+    if (next !== 'active' || backgroundedAt === null) return
+
+    const away = Date.now() - backgroundedAt
+    clearBackgroundWatch()
+    if (!isActive()) return
+    // JS timers can be suspended while backgrounded, so the absence is re-checked on return.
+    if (away > BACKGROUND_GRACE_MS) disconnectLipSync('app backgrounded')
+    // Returning, e.g. from voice input, is activity; the time away must not count as idle.
+    else useLipSyncSession.setState({ lastActivity: Date.now() })
 })

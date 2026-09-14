@@ -3,13 +3,13 @@ import { ImageManipulator, SaveFormat } from 'expo-image-manipulator'
 const LEMONSLICE_SESSIONS = 'https://lemonslice.com/api/liveai/sessions'
 const DAILY_TOKENS = 'https://api.daily.co/v1/meeting-tokens'
 
-/** 16kHz mono PCM16 is what LemonSlice wants, and what ElevenLabs can emit directly. */
-export const SAMPLE_RATE = 16000
 /**
- * ~100ms per chunk, as the docs recommend. Kept divisible by 3 so the byte
- * offsets line up with base64 groups when chunking.
+ * Bytes in ~100ms of mono PCM16 at the given rate, as the docs recommend. Kept a
+ * multiple of 6: even so no 16-bit sample straddles two chunks, and divisible by
+ * three so every chunk base64-encodes without padding.
  */
-export const CHUNK_BYTES = 3201
+export const chunkBytesFor = (sampleRate: number) =>
+    Math.max(6, Math.floor((sampleRate * 0.1 * 2) / 6) * 6)
 
 const readError = async (response: Response) => {
     const body = await response.text().catch(() => '')
@@ -102,30 +102,6 @@ export const mintDailyToken = async (dailyApiKey: string, dailyUrl: string) => {
     const token = ((await response.json()) as { token?: string })?.token
     if (!token) throw new Error('Daily returned no token')
     return token
-}
-
-/**
- * Asks ElevenLabs for raw PCM instead of mp3 so the bytes can go straight to
- * LemonSlice with no transcoding step on device.
- */
-export const synthesizePcm = async (params: {
-    text: string
-    apiKey: string
-    voiceId: string
-    model: string
-}) => {
-    const response = await fetch(
-        `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(
-            params.voiceId
-        )}?output_format=pcm_${SAMPLE_RATE}`,
-        {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'xi-api-key': params.apiKey },
-            body: JSON.stringify({ text: params.text, model_id: params.model }),
-        }
-    )
-    if (!response.ok) throw new Error(`ElevenLabs failed ${await readError(response)}`)
-    return new Uint8Array(await response.arrayBuffer())
 }
 
 const BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
