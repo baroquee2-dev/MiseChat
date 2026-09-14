@@ -639,6 +639,17 @@ const STREAM_SAMPLE_RATE = 24000
 
 const isAbort = (error: unknown) => error instanceof Error && error.name === 'AbortError'
 
+/** Logs, once per reply, how long a streamed voice took to produce its first audio. */
+const createFirstAudioLogger = (provider: string) => {
+    const startedAt = Date.now()
+    let logged = false
+    return () => {
+        if (logged) return
+        logged = true
+        Logger.info(`${provider} speech first audio after ${Date.now() - startedAt}ms`)
+    }
+}
+
 const playElevenLabsSpeech = async (
     text: string,
     apiKey: string,
@@ -646,6 +657,7 @@ const playElevenLabsSpeech = async (
     model: string,
     rate: number
 ): Promise<void> => {
+    const onAudio = createFirstAudioLogger('ElevenLabs')
     const controller = new AbortController()
     elevenLabsAbortController = controller
     const response = await streamingFetch(
@@ -678,7 +690,10 @@ const playElevenLabsSpeech = async (
         for (;;) {
             const { done, value } = await reader.read()
             if (done) break
-            if (value) player.push(value)
+            if (value) {
+                onAudio()
+                player.push(value)
+            }
         }
         player.end()
     } catch (error) {
@@ -729,7 +744,211 @@ const queueGeminiSpeech = (
     return geminiQueue
 }
 
+const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta/models'
+
+type GeminiSpeechChunk = {
+    candidates?: {
+        content?: { parts?: { inlineData?: { data?: string } }[] }
+        finishReason?: string
+    }[]
+    error?: { message?: string }
+}
+
+const geminiSpeechBody = (text: string, voiceName: string) =>
+    JSON.stringify({
+        contents: [{ parts: [{ text }] }],
+        generationConfig: {
+            responseModalities: ['AUDIO'],
+            speechConfig: {
+                voiceConfig: {
+                    prebuiltVoiceConfig: { voiceName },
+                },
+            },
+        },
+    })
+
+/** Requests a complete clip, which Gemini returns as 24kHz mono PCM16. */
+const fetchGeminiAudio = async (
+    text: string,
+    apiKey: string,
+    voiceName: string,
+    model: string,
+    signal: AbortSignal
+): Promise<Uint8Array> => {
+    const response = await fetch(`${GEMINI_API}/${encodeURIComponent(model)}:generateContent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+        body: geminiSpeechBody(text, voiceName),
+        signal: signal,
+    })
+    if (!response.ok) {
+        const detail = await response.text()
+        throw new Error(detail || `Gemini TTS request failed (${response.status})`)
+    }
+
+    const result = (await response.json()) as GeminiSpeechChunk
+    const base64Audio = result.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data
+    if (!base64Audio) throw new Error('Gemini TTS returned no audio data')
+    return base64ToBytes(base64Audio)
+}
+
+/** Gemini streams speech from 3.1 on; earlier TTS models only return a complete clip. */
+const supportsGeminiStreaming = (model: string) => {
+    const version = /gemini-(\d+)\.(\d+)/.exec(model)
+    if (!version) return false
+    const major = Number(version[1])
+    return major > 3 || (major === 3 && Number(version[2]) >= 1)
+}
+
+/**
+ * Streamed Gemini speech is often cut off once a response passes about a minute of audio,
+ * so long text is sent as sentence-bounded pieces that stay well short of that.
+ */
+const GEMINI_SEGMENT_CHARS = 200
+
+const splitGeminiSegments = (text: string) => {
+    const sentences = text.match(/[^。！？!?.…\n]*[。！？!?.…\n]+|[^。！？!?.…\n]+$/g) ?? [text]
+    const segments: string[] = []
+    let current = ''
+    for (const sentence of sentences) {
+        if (current.length + sentence.length > GEMINI_SEGMENT_CHARS) {
+            segments.push(current)
+            current = ''
+        }
+        let rest = sentence
+        while (rest.length > GEMINI_SEGMENT_CHARS) {
+            segments.push(rest.slice(0, GEMINI_SEGMENT_CHARS))
+            rest = rest.slice(GEMINI_SEGMENT_CHARS)
+        }
+        current += rest
+    }
+    segments.push(current)
+    return segments.map((segment) => segment.trim()).filter(Boolean)
+}
+
+/**
+ * Streams one piece into the player. Returns false when the stream produced no audio,
+ * so the caller can fetch that piece as a complete clip instead.
+ */
+const streamGeminiSegment = async (
+    text: string,
+    apiKey: string,
+    voiceName: string,
+    model: string,
+    player: PcmStreamPlayer,
+    signal: AbortSignal,
+    onAudio: () => void
+): Promise<boolean> => {
+    const response = await streamingFetch(
+        `${GEMINI_API}/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`,
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+            body: geminiSpeechBody(text, voiceName),
+            signal: signal,
+        }
+    )
+    // A bad key, voice or model fails the same way without streaming, so it is reported now.
+    if ([400, 401, 403, 404].includes(response.status)) {
+        const detail = await response.text()
+        throw new Error(detail || `Gemini TTS request failed (${response.status})`)
+    }
+    if (!response.ok || !response.body) {
+        Logger.warn(`Gemini speech stream failed (${response.status}), retrying without streaming`)
+        return false
+    }
+
+    const stream = { receivedAudio: false, finishReason: '', error: '' }
+    const handleLine = (line: string) => {
+        if (!line.startsWith('data:')) return
+        let chunk: GeminiSpeechChunk
+        try {
+            chunk = JSON.parse(line.slice(5))
+        } catch {
+            return
+        }
+        if (chunk.error) stream.error = chunk.error.message || 'stream error'
+        const candidate = chunk.candidates?.[0]
+        if (candidate?.finishReason) stream.finishReason = candidate.finishReason
+        for (const part of candidate?.content?.parts ?? []) {
+            if (!part.inlineData?.data) continue
+            stream.receivedAudio = true
+            onAudio()
+            player.push(base64ToBytes(part.inlineData.data))
+        }
+    }
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let pending = ''
+    for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        pending += decoder.decode(value, { stream: true })
+        const lines = pending.split('\n')
+        pending = lines.pop() ?? ''
+        lines.forEach((line) => handleLine(line.trim()))
+    }
+    handleLine((pending + decoder.decode()).trim())
+
+    if (!stream.receivedAudio) {
+        Logger.warn(
+            `Gemini speech stream returned no audio${stream.error ? `: ${stream.error}` : ''}, retrying without streaming`
+        )
+        return false
+    }
+    // Audio already played cannot be taken back, so a piece cut short is only reported.
+    if (stream.error || (stream.finishReason && stream.finishReason !== 'STOP')) {
+        Logger.warn(`Gemini speech stream ended early (${stream.error || stream.finishReason})`)
+    }
+    return true
+}
+
 const playGeminiSpeech = async (
+    text: string,
+    apiKey: string,
+    voiceName: string,
+    model: string,
+    rate: number
+): Promise<void> => {
+    if (!supportsGeminiStreaming(model)) return playGeminiFile(text, apiKey, voiceName, model, rate)
+
+    const generation = geminiGeneration
+    const controller = new AbortController()
+    geminiAbortController = controller
+    const player = new PcmStreamPlayer(STREAM_SAMPLE_RATE, Math.min(rate, 2))
+    const finish = () => player.stop()
+    finishGeminiPlayback = finish
+
+    const onAudio = createFirstAudioLogger('Gemini')
+
+    try {
+        for (const segment of splitGeminiSegments(text)) {
+            if (generation !== geminiGeneration) break
+            const streamed = await streamGeminiSegment(
+                segment,
+                apiKey,
+                voiceName,
+                model,
+                player,
+                controller.signal,
+                onAudio
+            )
+            if (streamed || generation !== geminiGeneration) continue
+            const pcm = await fetchGeminiAudio(segment, apiKey, voiceName, model, controller.signal)
+            onAudio()
+            player.push(pcm)
+        }
+        player.end()
+    } catch (error) {
+        player.stop()
+        if (!isAbort(error)) throw error
+    }
+    await player.done
+    if (finishGeminiPlayback === finish) finishGeminiPlayback = undefined
+}
+
+const playGeminiFile = async (
     text: string,
     apiKey: string,
     voiceName: string,
@@ -738,41 +957,10 @@ const playGeminiSpeech = async (
 ): Promise<void> => {
     const controller = new AbortController()
     geminiAbortController = controller
-    const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-        {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-goog-api-key': apiKey,
-            },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text }] }],
-                generationConfig: {
-                    responseModalities: ['AUDIO'],
-                    speechConfig: {
-                        voiceConfig: {
-                            prebuiltVoiceConfig: { voiceName },
-                        },
-                    },
-                },
-            }),
-            signal: controller.signal,
-        }
-    )
-    if (!response.ok) {
-        const detail = await response.text()
-        throw new Error(detail || `Gemini TTS request failed (${response.status})`)
-    }
-
-    const result = (await response.json()) as {
-        candidates?: { content?: { parts?: { inlineData?: { data?: string } }[] } }[]
-    }
-    const base64Audio = result.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data
-    if (!base64Audio) throw new Error('Gemini TTS returned no audio data')
+    const pcm = await fetchGeminiAudio(text, apiKey, voiceName, model, controller.signal)
 
     const audioFile = new File(Paths.cache, `gemini-tts-${Date.now()}.wav`)
-    audioFile.write(pcmToWav(base64ToBytes(base64Audio)))
+    audioFile.write(pcmToWav(pcm))
     await setAudioModeAsync({ playsInSilentMode: true })
 
     await new Promise<void>((resolve) => {
@@ -927,6 +1115,7 @@ const playCartesiaSpeech = async (
     // Beyond Cartesia's own speed range the remainder is applied at playback, as before.
     const playbackBoost = rate > speechSpeed ? Math.min(rate / speechSpeed, 2) : 1
     const generation = cartesiaGeneration
+    const onAudio = createFirstAudioLogger('Cartesia')
     const player = new PcmStreamPlayer(STREAM_SAMPLE_RATE, playbackBoost)
     const contextId = `misechat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     let receivedAudio = false
@@ -988,6 +1177,7 @@ const playCartesiaSpeech = async (
             }
             if (message.type === 'chunk' && message.data) {
                 receivedAudio = true
+                onAudio()
                 player.push(base64ToBytes(message.data))
             }
             if (message.type === 'done' || message.done) {
