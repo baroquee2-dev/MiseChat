@@ -3,14 +3,14 @@ import { persist } from 'zustand/middleware'
 
 import { Storage } from '@lib/enums/Storage'
 import { createMMKVStorage } from '@lib/storage/MMKV'
-import { AppDirectory, copyFile, deleteFile, makeDirectory } from '@lib/utils/File'
+import { AppDirectory, copyFile, deleteFile, fileExists, makeDirectory } from '@lib/utils/File'
 
 export const MOUTH_SLOTS = ['closed', 'half', 'open'] as const
 export type MouthSlot = (typeof MOUTH_SLOTS)[number]
 /** File URIs of one character's frames. */
 export type MouthSpriteSet = Record<MouthSlot, string>
 
-const MOUTH_SPRITE_DIR = `${AppDirectory.CharacterPath}mouth/`
+export const MOUTH_SPRITE_DIR = `${AppDirectory.CharacterPath}mouth/`
 
 interface MouthSpriteState {
     enabled: boolean
@@ -71,6 +71,40 @@ export const saveMouthSprites = async (characterId: number, frames: MouthSpriteS
         if (previous?.[slot] && previous[slot] !== saved[slot]) deleteFile(previous[slot])
     }
     return saved
+}
+
+/**
+ * Bindings as bare file names, for backups. The absolute path contains the app's
+ * package name, which differs between the normal and dev builds, so only the names
+ * travel and the paths are rebuilt on restore.
+ */
+export const exportMouthSpriteBindings = () => {
+    const bindings = useMouthSprites.getState().bindings
+    const named: Record<string, MouthSpriteSet> = {}
+    for (const [characterId, frames] of Object.entries(bindings)) {
+        const names = {} as MouthSpriteSet
+        for (const slot of MOUTH_SLOTS) {
+            names[slot] = frames[slot].slice(frames[slot].lastIndexOf('/') + 1)
+        }
+        named[characterId] = names
+    }
+    return named
+}
+
+/** Rebuilds bindings from a backup, dropping any whose files did not come along. */
+export const importMouthSpriteBindings = (named: Record<string, MouthSpriteSet>) => {
+    const bindings: Record<string, MouthSpriteSet> = {}
+    for (const [characterId, names] of Object.entries(named)) {
+        const frames = {} as MouthSpriteSet
+        const complete = MOUTH_SLOTS.every((slot) => {
+            const name = names?.[slot]
+            if (!name || name.includes('/') || name.includes('..')) return false
+            frames[slot] = `${MOUTH_SPRITE_DIR}${name}`
+            return fileExists(frames[slot])
+        })
+        if (complete) bindings[characterId] = frames
+    }
+    useMouthSprites.setState({ bindings: bindings })
 }
 
 /** Removes a character's frames, both the files and the binding. */
