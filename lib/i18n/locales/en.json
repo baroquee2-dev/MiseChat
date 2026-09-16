@@ -126,8 +126,6 @@
         "copyFailed": "Failed to copy to clipboard",
         "sendToBegin": "Send a message to begin!",
         "startOfChat": "Start of chat",
-        "hideFiltered": "Hide Filtered",
-        "showFiltered": "Show Filtered",
         "collapse": "Collapse",
         "hideEarlier": "▲ Hide earlier messages",
         "earlierMessage": "▼ {{count}} earlier message",
@@ -444,10 +442,8 @@
         "systemPrompt": "System Prompt",
         "promptStructure": "Prompt Structure",
         "advancedSettings": "Advanced Settings",
-        "expertSettings": "Expert Settings",
         "systemPromptFormat": "System Prompt Format",
         "stopSequence": "Stop Sequence",
-        "useCommonStop": "Use Common Stop Sequences",
         "removeThinkTags": "Remove Think Tags",
         "attachments": "Content Options",
         "sendImages": "Send Images",
@@ -459,11 +455,7 @@
         "formatDisabled": "Disabled",
         "formatPlainQuote": "Plain Action, Quote Speech",
         "formatAsteriskPlain": "Asterisk Action, Plain Speech",
-        "formatAsteriskQuote": "Asterisk Action, Quote Speech",
-        "hiddenText": "Hidden Text",
-        "hiddenTextDesc": "Hides text that matches regex patterns defined below. (case insensitive)",
-        "sendFiltered": "Send Filtered Text",
-        "sendFilteredDesc": "Sends the filtered text for inference"
+        "formatAsteriskQuote": "Asterisk Action, Quote Speech"
     },
     "api": {
         "title": "API Manager",

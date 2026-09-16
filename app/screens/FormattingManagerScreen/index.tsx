@@ -10,7 +10,6 @@ import { useShallow } from 'zustand/react/shallow'
 import DropdownSheet from '@components/input/DropdownSheet'
 import StringArrayEditor from '@components/input/StringArrayEditor'
 import ThemedCheckbox from '@components/input/ThemedCheckbox'
-import ThemedSwitch from '@components/input/ThemedSwitch'
 import ThemedTextInput from '@components/input/ThemedTextInput'
 import SectionTitle from '@components/text/SectionTitle'
 import Accordion from '@components/views/Accordion'
@@ -19,7 +18,6 @@ import ContextMenu from '@components/views/ContextMenu'
 import HeaderTitle from '@components/views/HeaderTitle'
 import InputSheet from '@components/views/InputSheet'
 import useAutosave from '@lib/hooks/AutoSave'
-import { useTextFilterStore } from '@lib/hooks/TextFilter'
 import i18n from '@lib/i18n'
 import { MarkdownStyle } from '@lib/markdown/Markdown'
 import { Instructs } from '@lib/state/Instructs'
@@ -58,15 +56,6 @@ const FormattingManager = () => {
     const { data: styleList = [] } = useLiveQuery(Instructs.db.query.instructListQuery())
     const selectedStyle = styleList.filter((item) => item.id === instructID)?.[0]
     const [showNewInstruct, setShowNewInstruct] = useState(false)
-    const { textFilter, setTextFilter, sendFilteredText, setSendFilteredText } = useTextFilterStore(
-        useShallow((state) => ({
-            sendFilteredText: state.sendFilteredText,
-            setSendFilteredText: state.setSendFilteredText,
-            textFilter: state.filter,
-            setTextFilter: state.setFilter,
-        }))
-    )
-
     const handleSaveInstruct = () => {
         if (currentInstruct && instructID)
             Instructs.db.mutate.updateInstruct(instructID, currentInstruct)
@@ -296,29 +285,6 @@ const FormattingManager = () => {
                                 </View>
                             </View>
 
-                            <View style={{ rowGap: spacing.m }}>
-                                <SectionTitle>{t('instruct.hiddenText')}</SectionTitle>
-                                <Text
-                                    style={{
-                                        color: color.text._400,
-                                    }}>
-                                    {t('instruct.hiddenTextDesc')}
-                                </Text>
-
-                                <StringArrayEditor value={textFilter} setValue={setTextFilter} />
-
-                                <ThemedSwitch
-                                    label={t('instruct.sendFiltered')}
-                                    description={t('instruct.sendFilteredDesc')}
-                                    value={sendFilteredText}
-                                    onChangeValue={setSendFilteredText}
-                                />
-                            </View>
-                        </View>
-                    </Accordion>
-
-                    <Accordion label={t('instruct.expertSettings')}>
-                        <View style={{ rowGap: spacing.xl }}>
                             <ThemedTextInput
                                 label={t('instruct.systemPromptFormat')}
                                 value={currentInstruct.system_prompt_format}
@@ -350,16 +316,6 @@ const FormattingManager = () => {
                             />
 
                             <View>
-                                <ThemedCheckbox
-                                    label={t('instruct.useCommonStop')}
-                                    value={currentInstruct.use_common_stop}
-                                    onChangeValue={(b) => {
-                                        setCurrentInstruct({
-                                            ...currentInstruct,
-                                            use_common_stop: b,
-                                        })
-                                    }}
-                                />
                                 <ThemedCheckbox
                                     label={t('instruct.removeThinkTags')}
                                     value={currentInstruct.hide_think_tags}

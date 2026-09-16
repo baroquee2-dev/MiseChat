@@ -1,6 +1,5 @@
 export enum Storage {
     API = 'api-storage',
-    TextFilter = 'textfilter-storage',
     BackgroundImage = 'background-image-storage',
     UserCard = 'usercard-storage',
     Instruct = 'instruct-storage',

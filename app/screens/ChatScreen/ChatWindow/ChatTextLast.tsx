@@ -1,13 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { Pressable, View, Animated, Easing, useAnimatedValue } from 'react-native'
 import { ScrollView } from 'react-native-gesture-handler'
-import { useTranslation } from 'react-i18next'
 import Markdown from 'react-native-markdown-display'
 import { useShallow } from 'zustand/react/shallow'
 
-import ThemedButton from '@components/buttons/ThemedButton'
 import AnimatedEllipsis from '@components/text/AnimatedEllipsis'
-import { useTextFilter } from '@lib/hooks/TextFilter'
 import { MarkdownStyle } from '@lib/markdown/Markdown'
 import { Chats, useInference } from '@lib/state/Chat'
 
@@ -32,13 +29,11 @@ const ChatTextLast: React.FC<ChatTextProps> = ({
     onBubblePress,
     onBubbleLongPress,
 }) => {
-    const { t } = useTranslation()
     const { markdown, rules, style } = MarkdownStyle.useCustomFormatting()
 
     const { swipeText, swipeId } = Chats.useSwipeData(index)
     const { buffer } = Chats.useBuffer()
 
-    const [showHidden, setShowHidden] = useState(false)
     const viewRef = useRef<View>(null)
     const scrollRef = useRef<ScrollView>(null)
     const currentSwipeId = useInference((state) => state.currentSwipeId)
@@ -86,10 +81,8 @@ const ChatTextLast: React.FC<ChatTextProps> = ({
         }
     }, [nowGenerating, updateHeight])
 
-    const filteredText = useTextFilter(swipeText?.trim() ?? '')
-    const renderedText = showHidden ? swipeText?.trim() : filteredText.result
     const displayText =
-        nowGenerating && swipeId === currentSwipeId ? buffer.data.trim() : renderedText
+        nowGenerating && swipeId === currentSwipeId ? buffer.data.trim() : swipeText?.trim()
 
     const markdownContent = (
         <>
@@ -97,21 +90,6 @@ const ChatTextLast: React.FC<ChatTextProps> = ({
             <Markdown mergeStyle={false} markdownit={markdown} rules={rules} style={style}>
                 {displayText}
             </Markdown>
-            {filteredText.found && (
-                <View style={{ flexDirection: 'row' }}>
-                    <ThemedButton
-                        onPress={() => setShowHidden(!showHidden)}
-                        variant="secondary"
-                        label={showHidden ? t('chat.hideFiltered') : t('chat.showFiltered')}
-                        labelStyle={{ flex: 0, fontSize: 12 }}
-                        buttonStyle={{
-                            paddingVertical: 0,
-                            paddingHorizontal: 0,
-                            borderWidth: 0,
-                        }}
-                    />
-                </View>
-            )}
         </>
     )
 

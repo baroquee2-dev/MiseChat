@@ -1,10 +1,7 @@
-import React, { useRef, useState } from 'react'
+import React, { useRef } from 'react'
 import { Animated, Easing, useAnimatedValue, View } from 'react-native'
-import { useTranslation } from 'react-i18next'
 import Markdown from 'react-native-markdown-display'
 
-import ThemedButton from '@components/buttons/ThemedButton'
-import { useTextFilter } from '@lib/hooks/TextFilter'
 import { MarkdownStyle } from '@lib/markdown/Markdown'
 import { Chats } from '@lib/state/Chat'
 
@@ -14,9 +11,7 @@ type ChatTextProps = {
 }
 
 const ChatText: React.FC<ChatTextProps> = ({ nowGenerating, index }) => {
-    const { t } = useTranslation()
     const { markdown, rules, style } = MarkdownStyle.useCustomFormatting()
-    const [showHidden, setShowHidden] = useState(false)
     const { swipeText } = Chats.useSwipeData(index)
     const viewRef = useRef<View>(null)
     const animHeight = useAnimatedValue(-1)
@@ -47,30 +42,12 @@ const ChatText: React.FC<ChatTextProps> = ({ nowGenerating, index }) => {
         })
     }
 
-    const filteredText = useTextFilter(swipeText?.trim() ?? '')
-    const renderedText = showHidden ? swipeText?.trim() : filteredText.result
     return (
         <Animated.View style={{ overflow: 'scroll', height: animHeight }}>
             <View style={{ minHeight: 10 }} ref={viewRef} onLayout={updateHeight}>
                 <Markdown mergeStyle={false} markdownit={markdown} rules={rules} style={style}>
-                    {renderedText}
+                    {swipeText?.trim()}
                 </Markdown>
-                {filteredText.found && (
-                    <View style={{ flexDirection: 'row' }}>
-                        <ThemedButton
-                            onPress={() => setShowHidden(!showHidden)}
-                            variant="secondary"
-                            label={showHidden ? t('chat.hideFiltered') : t('chat.showFiltered')}
-                            labelStyle={{ flex: 0, fontSize: 12 }}
-                            buttonStyle={{
-                                paddingVertical: 0,
-                                paddingBottom: 0,
-                                paddingHorizontal: 0,
-                                borderWidth: 0,
-                            }}
-                        />
-                    </View>
-                )}
             </View>
         </Animated.View>
     )

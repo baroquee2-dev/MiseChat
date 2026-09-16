@@ -28,7 +28,6 @@ const styleFillerFields = {
     scenario: true,
     personality: true,
     hide_think_tags: true,
-    use_common_stop: true,
     send_images: true,
     send_audio: true,
     send_documents: true,
@@ -156,9 +155,7 @@ export namespace Instructs {
                             .split(',')
                             .forEach((item) => item !== '' && sequence.push(item))
 
-                    if (instruct.use_common_stop) return [...sequence, ...commonStopStrings]
-
-                    return sequence
+                    return [...sequence, ...commonStopStrings]
                 },
             }),
             {

@@ -126,8 +126,6 @@
         "copyFailed": "複製到剪貼簿失敗",
         "sendToBegin": "傳送訊息開始對話！",
         "startOfChat": "聊天開始",
-        "hideFiltered": "隱藏已過濾",
-        "showFiltered": "顯示已過濾",
         "collapse": "收起",
         "hideEarlier": "▲ 隱藏更早的訊息",
         "earlierMessage": "▼ {{count}} 則更早的訊息",
@@ -444,10 +442,8 @@
         "systemPrompt": "系統提示詞（System Prompt）",
         "promptStructure": "提示詞結構",
         "advancedSettings": "進階設定",
-        "expertSettings": "專家設定",
         "systemPromptFormat": "系統提示詞格式（System Prompt Format）",
         "stopSequence": "停止序列（Stop Sequence）",
-        "useCommonStop": "使用常用停止序列",
         "removeThinkTags": "移除思考標籤（Think Tags）",
         "attachments": "內容選項",
         "sendImages": "傳送圖片",
@@ -459,11 +455,7 @@
         "formatDisabled": "停用",
         "formatPlainQuote": "純文字動作，引號對話",
         "formatAsteriskPlain": "星號動作，純文字對話",
-        "formatAsteriskQuote": "星號動作，引號對話",
-        "hiddenText": "隱藏文字",
-        "hiddenTextDesc": "隱藏符合下方正則表達式的文字。（不分大小寫）",
-        "sendFiltered": "傳送已過濾文字",
-        "sendFilteredDesc": "將過濾後的文字送去推論（inference）"
+        "formatAsteriskQuote": "星號動作，引號對話"
     },
     "api": {
         "title": "API 管理",

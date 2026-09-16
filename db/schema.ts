@@ -258,7 +258,6 @@ export const instructs = sqliteTable('instructs', {
     personality: integer('personality', { mode: 'boolean' }).notNull().default(true),
 
     hide_think_tags: integer('hide_think_tags', { mode: 'boolean' }).notNull().default(true),
-    use_common_stop: integer('use_common_stop', { mode: 'boolean' }).notNull().default(true),
 
     send_images: integer('send_images', { mode: 'boolean' }).notNull().default(true),
     send_audio: integer('send_audio', { mode: 'boolean' }).notNull().default(true),
