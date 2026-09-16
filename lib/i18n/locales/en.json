@@ -174,7 +174,8 @@
         "removeTitle": "Remove mouth images",
         "removeDesc": "Remove the three mouth images bound to {{name}}?",
         "removeConfirm": "Remove",
-        "removed": "Mouth images removed"
+        "removed": "Mouth images removed",
+        "blockedBySafety": "Gemini refused this character image on content policy grounds. Retrying will not help, so upload the three mouth frames yourself."
     },
     "settings": {
         "title": "Settings",

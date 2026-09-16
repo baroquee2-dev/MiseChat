@@ -13,6 +13,16 @@ const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta/models'
 const MAX_INPUT_SIDE = 1536
 const MAX_ATTEMPTS = 3
 const RETRY_STATUSES = [429, 500, 502, 503, 504]
+/** Reasons Gemini gives for refusing on content grounds, which retrying cannot change. */
+const BLOCKED_REASONS = ['SAFETY', 'IMAGE_SAFETY', 'PROHIBITED_CONTENT', 'BLOCKLIST']
+
+/** Thrown when the character image itself is what Gemini objects to. */
+export class MouthSpriteBlockedError extends Error {
+    constructor(detail: string) {
+        super(detail)
+        this.name = 'MouthSpriteBlockedError'
+    }
+}
 
 const ASPECT_RATIOS: Record<string, number> = {
     '1:1': 1,
@@ -137,7 +147,12 @@ const extractImage = (data: GeminiImageResponse) => {
         data.promptFeedback ? `promptFeedback=${JSON.stringify(data.promptFeedback)}` : '',
         texts.length ? texts.join(' ').slice(0, 200) : '',
     ].filter(Boolean)
-    throw new Error(`Gemini returned no image${details.length ? ` (${details.join('; ')})` : ''}`)
+    const detail = details.join('; ')
+    const blockReason = (data.promptFeedback as { blockReason?: string } | undefined)?.blockReason
+    if (blockReason || BLOCKED_REASONS.includes(candidate?.finishReason ?? '')) {
+        throw new MouthSpriteBlockedError(detail || 'blocked by content policy')
+    }
+    throw new Error(`Gemini returned no image${detail ? ` (${detail})` : ''}`)
 }
 
 const requestFrame = async (
@@ -180,6 +195,8 @@ const requestFrame = async (
         try {
             return extractImage((await response.json()) as GeminiImageResponse)
         } catch (error) {
+            // A refusal on content grounds is settled; only an empty answer is worth another try.
+            if (error instanceof MouthSpriteBlockedError) throw error
             // The model occasionally answers in text only; another try usually draws.
             if (attempt === MAX_ATTEMPTS) throw error
             Logger.warn(`${error}, retrying (${attempt})`)

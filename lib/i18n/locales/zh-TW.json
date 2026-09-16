@@ -174,7 +174,8 @@
         "removeTitle": "移除嘴型圖",
         "removeDesc": "確定要移除「{{name}}」綁定的三張嘴型圖嗎？",
         "removeConfirm": "移除",
-        "removed": "已移除嘴型圖"
+        "removed": "已移除嘴型圖",
+        "blockedBySafety": "這張角色圖被 Gemini 的內容政策擋下，重試也不會過，請改用手動上傳三張嘴型圖。"
     },
     "settings": {
         "title": "設定",

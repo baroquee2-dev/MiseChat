@@ -15,6 +15,7 @@ import { disconnectLipSync } from '@lib/lemonslice/LipSyncService'
 import {
     generateMouthSprite,
     MOUTH_SPRITE_MODEL_LABEL,
+    MouthSpriteBlockedError,
     prepareMouthSpriteSource,
 } from '@lib/sprites/MouthSpriteGenerator'
 import { Characters } from '@lib/state/Characters'
@@ -159,13 +160,21 @@ const MouthSpriteSettings = () => {
         )
         failures.forEach(({ slot, error }) => {
             Logger.warn(`Mouth sprite ${slot} failed: ${errorText(error)}`)
-            Logger.errorToast(
-                t('mouthSprites.generateFailed', {
-                    slot: t(`mouthSprites.${slot}`),
-                    error: errorText(error),
-                })
-            )
         })
+        // Content refusals hit all three frames for the same reason, so say it once.
+        const blocked = failures.some(({ error }) => error instanceof MouthSpriteBlockedError)
+        if (blocked) {
+            Logger.errorToast(t('mouthSprites.blockedBySafety'))
+        } else {
+            failures.forEach(({ slot, error }) => {
+                Logger.errorToast(
+                    t('mouthSprites.generateFailed', {
+                        slot: t(`mouthSprites.${slot}`),
+                        error: errorText(error),
+                    })
+                )
+            })
+        }
         if (failures.length === 0) Logger.infoToast(t('mouthSprites.generateDone'))
     }
 
