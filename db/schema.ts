@@ -238,83 +238,33 @@ export const mediaAttachmentsRelations = relations(chatAttachments, ({ one }) =>
 // INSTRUCT
 
 const defaultSystemPrompt =
-    '{{system_prefix}}{{system_prompt}}\n{{character_desc}}\n{{personality}}\n{{scenario}}\n{{user_desc}}{{system_suffix}}'
+    '{{system_prompt}}\n{{character_desc}}\n{{personality}}\n{{scenario}}\n{{user_desc}}'
 
 export const instructs = sqliteTable('instructs', {
     id: integer('id', { mode: 'number' }).primaryKey(),
     name: text('name').notNull(),
 
     system_prompt: text('system_prompt').notNull(),
-    system_prefix: text('system_prefix').notNull(),
-    system_suffix: text('system_suffix').notNull(),
-    input_prefix: text('inpput_prefix').notNull(),
-    input_suffix: text('input_suffix').notNull(),
-    output_suffix: text('output_suffix').notNull(),
-    output_prefix: text('output_prefix').notNull(),
     stop_sequence: text('stop_sequence').notNull(),
     activation_regex: text('activation_regex').notNull(),
     user_alignment_message: text('user_alignment_message').notNull(),
-    wrap: integer('wrap', { mode: 'boolean' }).notNull(),
     macro: integer('macro', { mode: 'boolean' }).notNull(),
-    names: integer('names', { mode: 'boolean' }).notNull(),
-    names_force_groups: integer('names_force_groups', { mode: 'boolean' }).notNull(),
 
-    // Additions 3/7/2024, v2
     timestamp: integer('timestamp', { mode: 'boolean' }).notNull().default(false),
     examples: integer('examples', { mode: 'boolean' }).notNull().default(true),
     format_type: integer('format_type').notNull().default(0),
 
-    // additions 22/9/2024, v3
-    last_output_prefix: text('last_output_prefix').notNull().default(''),
-
-    // additions 17/10/2024 v4
     scenario: integer('scenario', { mode: 'boolean' }).notNull().default(true),
     personality: integer('personality', { mode: 'boolean' }).notNull().default(true),
 
-    // additions 5/5/2025 v5
     hide_think_tags: integer('hide_think_tags', { mode: 'boolean' }).notNull().default(true),
     use_common_stop: integer('use_common_stop', { mode: 'boolean' }).notNull().default(true),
 
-    // additions 22/5/2025 v6
     send_images: integer('send_images', { mode: 'boolean' }).notNull().default(true),
     send_audio: integer('send_audio', { mode: 'boolean' }).notNull().default(true),
     send_documents: integer('send_documents', { mode: 'boolean' }).notNull().default(true),
     last_image_only: integer('last_image_only', { mode: 'boolean' }).notNull().default(true),
 
-    // additions 21/7/2025 v7
-    system_prompt_format: text('system_prompt_format').notNull().default(defaultSystemPrompt),
-})
-
-// INSTRUCT FORMATS (expert / model chat templates)
-
-export const instructFormats = sqliteTable('instruct_formats', {
-    id: integer('id', { mode: 'number' }).primaryKey(),
-    name: text('name').notNull(),
-
-    system_prefix: text('system_prefix').notNull(),
-    system_suffix: text('system_suffix').notNull(),
-    input_prefix: text('input_prefix').notNull(),
-    input_suffix: text('input_suffix').notNull(),
-    output_suffix: text('output_suffix').notNull(),
-    output_prefix: text('output_prefix').notNull(),
-    last_output_prefix: text('last_output_prefix').notNull().default(''),
-    stop_sequence: text('stop_sequence').notNull(),
-    activation_regex: text('activation_regex').notNull().default(''),
-    user_alignment_message: text('user_alignment_message').notNull().default(''),
-    wrap: integer('wrap', { mode: 'boolean' }).notNull().default(false),
-    macro: integer('macro', { mode: 'boolean' }).notNull().default(false),
-    names: integer('names', { mode: 'boolean' }).notNull().default(false),
-    names_force_groups: integer('names_force_groups', { mode: 'boolean' }).notNull().default(false),
-    timestamp: integer('timestamp', { mode: 'boolean' }).notNull().default(false),
-    examples: integer('examples', { mode: 'boolean' }).notNull().default(true),
-    scenario: integer('scenario', { mode: 'boolean' }).notNull().default(true),
-    personality: integer('personality', { mode: 'boolean' }).notNull().default(true),
-    hide_think_tags: integer('hide_think_tags', { mode: 'boolean' }).notNull().default(true),
-    use_common_stop: integer('use_common_stop', { mode: 'boolean' }).notNull().default(true),
-    send_images: integer('send_images', { mode: 'boolean' }).notNull().default(true),
-    send_audio: integer('send_audio', { mode: 'boolean' }).notNull().default(true),
-    send_documents: integer('send_documents', { mode: 'boolean' }).notNull().default(true),
-    last_image_only: integer('last_image_only', { mode: 'boolean' }).notNull().default(true),
     system_prompt_format: text('system_prompt_format').notNull().default(defaultSystemPrompt),
 })
 

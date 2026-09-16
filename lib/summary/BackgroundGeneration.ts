@@ -29,10 +29,8 @@ const getRemoteFields = () => {
     return { values, config, instruct }
 }
 
-const buildPrompt = (config: APIConfiguration, prompt: BackgroundPrompt): string | Message[] => {
+const buildPrompt = (config: APIConfiguration, prompt: BackgroundPrompt): Message[] => {
     const completionType = config.request.completionType
-    if (completionType.type === 'textCompletions')
-        return `${prompt.system}\n\n${prompt.user}`.trim()
 
     return [
         { role: completionType.systemRole, [completionType.contentName]: prompt.system },
@@ -95,12 +93,6 @@ const generateRemote = async (prompt: BackgroundPrompt) => {
         return
     }
     const { config, values, instruct } = fields
-    if (config.request.requestType === 'horde') {
-        Logger.warn(
-            `Skipping ${prompt.label} because ${config.name} (Horde) is not supported for background generation`
-        )
-        return
-    }
 
     const backgroundConfig: APIConfiguration = {
         ...config,

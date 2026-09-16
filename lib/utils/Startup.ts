@@ -3,7 +3,7 @@ import { router } from 'expo-router'
 import { setBackgroundColorAsync as setUIBackgroundColor } from 'expo-system-ui'
 
 import { setupNotifications } from '@lib/notifications/Notifications'
-import { InstructFormats, Instructs } from '@lib/state/Instructs'
+import { Instructs } from '@lib/state/Instructs'
 import { SamplersManager } from '@lib/state/SamplerState'
 
 import { AppDirectory, makeDirectory } from './File'
@@ -85,13 +85,6 @@ const setDefaultInstruct = () => {
             Logger.warn('No Instruct styles exist, creating defaults')
             const id = await Instructs.generateInitialDefaults()
             await Instructs.useInstruct.getState().load(id)
-        }
-
-        const formatList = await InstructFormats.db.query.formatList()
-        if (!formatList || formatList.length === 0) {
-            Logger.warn('No Instruct formats exist, creating defaults')
-            const id = await InstructFormats.generateInitialDefaults()
-            await InstructFormats.useFormat.getState().load(id)
         }
     })
 }

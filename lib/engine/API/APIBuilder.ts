@@ -1,7 +1,6 @@
-import { nativeApplicationVersion } from 'expo-application'
 import i18n from '@lib/i18n'
 
-import { AppSettings, APP_NAME, CLAUDE_VERSION, GITHUB_REPOSITORY } from '@lib/constants/GlobalValues'
+import { AppSettings, CLAUDE_VERSION } from '@lib/constants/GlobalValues'
 import { SSEFetch } from '@lib/engine/SSEFetch'
 import { useInference } from '@lib/state/Chat'
 import { Logger } from '@lib/state/Logger'
@@ -179,8 +178,7 @@ export const buildAndSendRequest = async ({
         ]
         const reasonPattern = apiConfig.request.reasoningParsePattern
 
-        const isChatCompletions = apiConfig.request.completionType.type === 'chatCompletions'
-        if (reasonPattern && isChatCompletions) {
+        if (reasonPattern) {
             patternMapping.push({ type: 'reasoning', pattern: reasonPattern })
         }
 
@@ -218,95 +216,6 @@ type SenderParams = {
     onEnd: (data: string) => void
     onEvent: (event: any) => void
     stopGenerating: () => void
-}
-
-const hordeResponse = (senderParams: SenderParams) => {
-    const hordeURL = `https://aihorde.net/api/v2/`
-    let generation_id = ''
-    let aborted = false
-
-    const abortFn = () => {
-        aborted = true
-        if (generation_id) {
-            fetch(`${hordeURL}generate/text/status/${generation_id}`, {
-                method: 'DELETE',
-                headers: {
-                    'Client-Agent': `${APP_NAME}:${nativeApplicationVersion}:${GITHUB_REPOSITORY}`,
-                    accept: 'application/json',
-                    'Content-Type': 'application/json',
-                },
-            }).catch(Logger.error)
-        }
-        senderParams.stopGenerating()
-    }
-
-    const sendRequest = async () => {
-        Logger.info(`Using Horde`)
-
-        const request = await fetch(`${hordeURL}generate/text/async`, {
-            method: 'POST',
-            body: senderParams.payload,
-            headers: {
-                ...senderParams.header,
-                'Client-Agent': `${APP_NAME}:${nativeApplicationVersion}:${GITHUB_REPOSITORY}`,
-                accept: 'application/json',
-                'content-type': 'application/json',
-            },
-        })
-
-        if (request.status === 401) {
-            Logger.error(`Invalid API Key`)
-            useInference.getState().markGenerationFailed()
-            senderParams.stopGenerating()
-            return
-        }
-
-        if (request.status !== 202) {
-            Logger.error(`Horde Request failed.`)
-            useInference.getState().markGenerationFailed()
-            senderParams.stopGenerating()
-            const body = await request.json()
-            Logger.error(JSON.stringify(body))
-            for (const e of body.errors) Logger.error(e)
-            return
-        }
-
-        const body = await request.json()
-        generation_id = body.id
-        let result
-
-        do {
-            await new Promise((resolve) => setTimeout(resolve, 5000))
-            if (aborted) return
-
-            Logger.info(`Checking...`)
-            const response = await fetch(`${hordeURL}generate/text/status/${generation_id}`, {
-                method: 'GET',
-                headers: {
-                    'Client-Agent': `${APP_NAME}:${nativeApplicationVersion}:${GITHUB_REPOSITORY}`,
-                    accept: 'application/json',
-                    'content-type': 'application/json',
-                },
-            })
-
-            if (response.status === 400) {
-                Logger.error(`Response failed.`)
-                useInference.getState().markGenerationFailed()
-                senderParams.stopGenerating()
-                Logger.error((await response.json())?.message)
-                return
-            }
-
-            result = await response.json()
-        } while (!result.done)
-
-        if (aborted) return
-        if (result) senderParams.onEvent(result)
-        senderParams.stopGenerating()
-    }
-    sendRequest()
-
-    return abortFn
 }
 
 const readableStreamResponse = async (senderParams: SenderParams) => {
@@ -367,6 +276,5 @@ const responses: Record<
     APIConfiguration['request']['requestType'],
     (params: SenderParams) => Promise<() => void> | (() => void)
 > = {
-    horde: hordeResponse,
     stream: readableStreamResponse,
 }

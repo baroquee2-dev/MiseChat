@@ -4,7 +4,6 @@ export enum Storage {
     BackgroundImage = 'background-image-storage',
     UserCard = 'usercard-storage',
     Instruct = 'instruct-storage',
-    InstructFormat = 'instruct-format-storage',
     Logs = 'logstate-storage',
     Samplers = 'samplerstate-storage',
     TTS = 'tts-data-storage',

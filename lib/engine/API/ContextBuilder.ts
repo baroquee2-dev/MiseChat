@@ -51,11 +51,7 @@ type ContentTypes =
 export type Message = { role: string; [x: string]: ContentTypes[] | string }
 
 export const buildContext = async (params: ContextBuilderParams) => {
-    if (params.apiConfig.request.completionType.type === 'chatCompletions') {
-        return await buildChatCompletionContext(params)
-    } else {
-        return await buildTextCompletionContext(params)
-    }
+    return await buildChatCompletionContext(params)
 }
 
 /**
@@ -85,7 +81,6 @@ export const buildChatCompletionContext = async ({
     if (apiConfig.request.completionType.type !== 'chatCompletions') return
     const completionFeats = apiConfig.request.completionType
     const { characterCache, userCache, instructCache } = cache
-    const usePrefix = false
     const { systemPrompt, systemPromptLength } = getSystemPrompt({
         instruct,
         user,
@@ -93,7 +88,6 @@ export const buildChatCompletionContext = async ({
         userCache,
         characterCache,
         instructCache,
-        usePrefix,
     })
 
     const summaryContext = formatSummaryContext(summary) + formatKeyFactsForContext(keyFacts)
@@ -117,17 +111,13 @@ export const buildChatCompletionContext = async ({
         if (hasSummary && turnCount >= MAX_TURNS_WITH_SUMMARY) break
 
         const swipe_data = message.swipes[message.swipe_id]
-        // special case for claude, prefill may be useful!
-        const name_string = `${message.name} :`
-        const name_length = instruct.names ? await tokenizer(name_string) : 0
         const { attachments, hasImageNew } = getValidAttachments(
             message,
             completionFeats,
             hasImage
         )
 
-        const swipe_len = message.id !== -1 ? await chatTokenizer(message, index) : 0
-        const len = swipe_len + name_length
+        const len = message.id !== -1 ? await chatTokenizer(message, index) : 0
 
         if (total_length + len > maxLength && !bypassContextLength) break
         hasImage = hasImageNew
@@ -228,154 +218,6 @@ export const buildChatCompletionContext = async ({
     return output
 }
 
-export const buildTextCompletionContext = async ({
-    apiConfig,
-    apiValues,
-    messages,
-    character,
-    user,
-    cache,
-    summary,
-    keyFacts,
-    instruct,
-    tokenizer,
-    chatTokenizer,
-    maxLength,
-    bypassContextLength,
-    messageLoader,
-}: ContextBuilderParams) => {
-    const delta = performance.now()
-    const useSuffix = false
-    const { characterCache, userCache, instructCache } = cache
-
-    const { systemPrompt, systemPromptLength } = getSystemPrompt({
-        instruct,
-        user,
-        character,
-        userCache,
-        characterCache,
-        instructCache,
-        useSuffix,
-    })
-
-    const summaryContext = formatSummaryContext(summary) + formatKeyFactsForContext(keyFacts)
-    const summaryLength = summaryContext ? await tokenizer(summaryContext) : 0
-    let payload = systemPrompt + summaryContext
-    const payloadLength = systemPromptLength + summaryLength
-
-    // suffix must be delayed for example messages
-    let message_acc = ``
-    let message_acc_length = 0
-    let is_last = true
-    let index = messages.length - 1
-
-    const wrap_string = `\n`
-    const wrap_length = instruct.wrap ? await tokenizer(wrap_string) : 0
-
-    // we use this to check if the first message is reached
-    // this is needed to check if examples should be added
-    let first_message_reached = false
-
-    // we require lengths for names if use_names is enabled
-    let hasMedia = false
-    const hasSummary = !!summary?.trim()
-    let turnCount = 0
-    for (const message of messages.reverse()) {
-        if (hasSummary && turnCount >= MAX_TURNS_WITH_SUMMARY) break
-
-        if (!hasMedia && message.attachments?.length) {
-            hasMedia = true
-        }
-        const swipe_len = await chatTokenizer(message, index)
-        const swipe_data = message.swipes[message.swipe_id]
-
-        /** Accumulate total string length
-         *  The context builder MUST retain context length below the
-         *  context limit, especially for local gens to prevent truncation
-         * **/
-
-        let instruct_len = message.is_user
-            ? instructCache.input_prefix_length
-            : is_last
-              ? instructCache.last_output_prefix_length
-              : instructCache.output_suffix_length
-
-        // for last message, we want to skip the end token to allow the LLM to generate
-
-        if (!is_last)
-            instruct_len += message.is_user
-                ? instructCache.input_suffix_length
-                : instructCache.output_suffix_length
-
-        const name_string = `${message.name}: `
-        const name_length = instruct.names ? await tokenizer(name_string) : 0
-
-        const shard_length = swipe_len + instruct_len + name_length + wrap_length
-
-        // check if within context window
-        if (message_acc_length + payloadLength + shard_length > maxLength && !bypassContextLength) {
-            break
-        }
-
-        // apply strings
-
-        let message_shard = message.is_user
-            ? instruct.input_prefix
-            : is_last
-              ? instruct.last_output_prefix
-              : instruct.output_prefix
-
-        if (instruct.names) message_shard += name_string
-
-        message_shard += swipe_data.swipe
-
-        if (!is_last) {
-            message_shard += `${message.is_user ? instruct.input_suffix : instruct.output_suffix}`
-        }
-
-        if (instruct.wrap) {
-            message_shard += wrap_string
-        }
-
-        first_message_reached = index === 0
-
-        // ensure no more is_last checks after this
-        is_last = false
-        message_acc_length += shard_length
-        message_acc = message_shard + message_acc
-        if (message.is_user) turnCount++
-        index--
-    }
-
-    if (index >= messages.length - 1 && messages.length !== 0) {
-        warnNoMessages()
-    }
-
-    const examples = character?.mes_example
-    if (
-        first_message_reached &&
-        examples &&
-        message_acc_length + payloadLength + characterCache.examples_length < maxLength
-    ) {
-        payload += examples
-        message_acc_length += characterCache.examples_length
-    }
-
-    payload += instruct.system_suffix
-    payload = replaceMacrosInternal(payload + message_acc, instruct)
-
-    if (hasMedia) {
-        Logger.errorToast(i18n.t('toast.textCompletionsNoMultimodal'))
-    }
-
-    Logger.info(`Approximate Context Size: ${message_acc_length + payloadLength} tokens`)
-    Logger.info(`${(performance.now() - delta).toFixed(2)}ms taken to build context`)
-
-    if (mmkv.getBoolean(AppSettings.PrintContext)) Logger.info(payload)
-
-    return payload
-}
-
 const thinkRule = buildThinkRules()
 
 /** Once a summary exists, raw history is hard-capped to this many recent turns. */
@@ -434,8 +276,6 @@ export const getSystemPrompt = ({
     userCache,
     characterCache,
     instructCache,
-    usePrefix = true,
-    useSuffix = true,
 }: {
     instruct: InstructType
     user?: CharacterCardData
@@ -443,8 +283,6 @@ export const getSystemPrompt = ({
     userCache: CharacterTokenCache
     characterCache: CharacterTokenCache
     instructCache: InstructTokenCache
-    usePrefix?: boolean
-    useSuffix?: boolean
 }) => {
     let systemPrompt = instruct.system_prompt_format
     if (systemPrompt === undefined) {
@@ -458,19 +296,9 @@ export const getSystemPrompt = ({
     let systemPromptLength = 0
     const macros = [
         {
-            macro: '{{system_prefix}}',
-            value: (usePrefix && instruct.system_prefix) || '',
-            length: instructCache.system_prefix_length,
-        },
-        {
-            macro: '{{system_suffix}}',
-            value: (useSuffix && instruct.system_suffix) || '',
-            length: instructCache.system_suffix_length,
-        },
-        {
             macro: '{{system_prompt}}',
             value: instruct.system_prompt ?? '',
-            length: instructCache.system_suffix_length,
+            length: instructCache.system_prompt_length,
         },
         {
             macro: '{{character_desc}}',
