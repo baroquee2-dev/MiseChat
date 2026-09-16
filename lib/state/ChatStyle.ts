@@ -54,13 +54,7 @@ export namespace ChatStyle {
             {
                 name: Storage.ChatStyle,
                 storage: createMMKVStorage(),
-                version: 2,
-                migrate: (persistedState: any, version) => {
-                    if (version < 2) {
-                        persistedState.dialogueFont = 'system'
-                    }
-                    return persistedState
-                },
+                version: 1,
             }
         )
     )

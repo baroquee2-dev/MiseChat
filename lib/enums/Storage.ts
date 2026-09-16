@@ -1,9 +1,6 @@
 export enum Storage {
     API = 'api-storage',
-    EngineData = 'enginedata-storage',
-    KV = 'kvdata-storage',
     TextFilter = 'textfilter-storage',
-    AppMode = 'appmode-storage',
     BackgroundImage = 'background-image-storage',
     UserCard = 'usercard-storage',
     Instruct = 'instruct-storage',

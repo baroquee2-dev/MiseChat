@@ -35,7 +35,20 @@ CREATE TABLE `characters` (
 	`post_history_instructions` text DEFAULT '' NOT NULL,
 	`image_id` integer NOT NULL,
 	`creator` text DEFAULT '' NOT NULL,
-	`character_version` text DEFAULT '' NOT NULL
+	`character_version` text DEFAULT '' NOT NULL,
+	`last_modified` integer,
+	`background_image` integer
+);
+--> statement-breakpoint
+CREATE TABLE `chat_attachment` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`chat_entry_id` integer NOT NULL,
+	`uri` text NOT NULL,
+	`type` text NOT NULL,
+	`mime_type` text NOT NULL,
+	`name` text NOT NULL,
+	`size` integer DEFAULT 0 NOT NULL,
+	FOREIGN KEY (`chat_entry_id`) REFERENCES `chat_entries`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
 CREATE TABLE `chat_entries` (
@@ -48,6 +61,21 @@ CREATE TABLE `chat_entries` (
 	FOREIGN KEY (`chat_id`) REFERENCES `chats`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
+CREATE TABLE `chat_key_facts` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`chat_id` integer NOT NULL,
+	`category` text DEFAULT 'identity' NOT NULL,
+	`key` text NOT NULL,
+	`value` text NOT NULL,
+	`note` text DEFAULT '' NOT NULL,
+	`previous_value` text DEFAULT '' NOT NULL,
+	`stale` integer DEFAULT false NOT NULL,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
+	FOREIGN KEY (`chat_id`) REFERENCES `chats`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `chat_key_facts_chat_id_key_idx` ON `chat_key_facts` (`chat_id`,`key`);--> statement-breakpoint
 CREATE TABLE `chat_swipes` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`entry_id` integer NOT NULL,
@@ -62,7 +90,50 @@ CREATE TABLE `chats` (
 	`id` integer PRIMARY KEY NOT NULL,
 	`create_date` integer NOT NULL,
 	`character_id` integer NOT NULL,
+	`user_id` integer,
+	`last_modified` integer,
+	`name` text DEFAULT 'New Chat' NOT NULL,
+	`scroll_offset` integer DEFAULT 0 NOT NULL,
+	`auto_summary` integer DEFAULT false NOT NULL,
+	`summary` text DEFAULT '' NOT NULL,
+	`summary_updated_at` integer,
+	`summary_turn_count` integer DEFAULT 0 NOT NULL,
+	`summary_token_count` integer DEFAULT 0 NOT NULL,
 	FOREIGN KEY (`character_id`) REFERENCES `characters`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE TABLE `instruct_formats` (
+	`id` integer PRIMARY KEY NOT NULL,
+	`name` text NOT NULL,
+	`system_prefix` text NOT NULL,
+	`system_suffix` text NOT NULL,
+	`input_prefix` text NOT NULL,
+	`input_suffix` text NOT NULL,
+	`output_suffix` text NOT NULL,
+	`output_prefix` text NOT NULL,
+	`last_output_prefix` text DEFAULT '' NOT NULL,
+	`stop_sequence` text NOT NULL,
+	`activation_regex` text DEFAULT '' NOT NULL,
+	`user_alignment_message` text DEFAULT '' NOT NULL,
+	`wrap` integer DEFAULT false NOT NULL,
+	`macro` integer DEFAULT false NOT NULL,
+	`names` integer DEFAULT false NOT NULL,
+	`names_force_groups` integer DEFAULT false NOT NULL,
+	`timestamp` integer DEFAULT false NOT NULL,
+	`examples` integer DEFAULT true NOT NULL,
+	`scenario` integer DEFAULT true NOT NULL,
+	`personality` integer DEFAULT true NOT NULL,
+	`hide_think_tags` integer DEFAULT true NOT NULL,
+	`use_common_stop` integer DEFAULT true NOT NULL,
+	`send_images` integer DEFAULT true NOT NULL,
+	`send_audio` integer DEFAULT true NOT NULL,
+	`send_documents` integer DEFAULT true NOT NULL,
+	`last_image_only` integer DEFAULT true NOT NULL,
+	`system_prompt_format` text DEFAULT '{{system_prefix}}{{system_prompt}}
+{{character_desc}}
+{{personality}}
+{{scenario}}
+{{user_desc}}{{system_suffix}}' NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE `instructs` (
@@ -81,7 +152,24 @@ CREATE TABLE `instructs` (
 	`wrap` integer NOT NULL,
 	`macro` integer NOT NULL,
 	`names` integer NOT NULL,
-	`names_force_groups` integer NOT NULL
+	`names_force_groups` integer NOT NULL,
+	`timestamp` integer DEFAULT false NOT NULL,
+	`examples` integer DEFAULT true NOT NULL,
+	`format_type` integer DEFAULT 0 NOT NULL,
+	`last_output_prefix` text DEFAULT '' NOT NULL,
+	`scenario` integer DEFAULT true NOT NULL,
+	`personality` integer DEFAULT true NOT NULL,
+	`hide_think_tags` integer DEFAULT true NOT NULL,
+	`use_common_stop` integer DEFAULT true NOT NULL,
+	`send_images` integer DEFAULT true NOT NULL,
+	`send_audio` integer DEFAULT true NOT NULL,
+	`send_documents` integer DEFAULT true NOT NULL,
+	`last_image_only` integer DEFAULT true NOT NULL,
+	`system_prompt_format` text DEFAULT '{{system_prefix}}{{system_prompt}}
+{{character_desc}}
+{{personality}}
+{{scenario}}
+{{user_desc}}{{system_suffix}}' NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE `lorebook_entries` (

@@ -158,16 +158,8 @@ export namespace Characters {
             {
                 name: Storage.UserCard,
                 storage: createMMKVStorage(),
-                version: 2,
+                version: 1,
                 partialize: (state) => ({ id: state.id, card: state.card }),
-                migrate: async (persistedState: any, version) => {
-                    if (version === 1) {
-                        // migration from CharacterCardV2 to CharacterCardData
-                        Logger.info('Migrating User Store to v2')
-                        persistedState.id = undefined
-                        persistedState.card = undefined
-                    }
-                },
             }
         )
     )

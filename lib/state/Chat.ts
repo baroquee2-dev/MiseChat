@@ -25,7 +25,6 @@ import {
     ChatSwipe,
     chatSwipes,
     ChatType,
-    CompletionTimings,
 } from 'db/schema'
 
 import { Characters } from './Characters'
@@ -104,8 +103,6 @@ export interface ChatState {
             updateFinished?: boolean
             updateStarted?: boolean
             verifySwipeId?: number
-            timings?: CompletionTimings
-            resetTimings?: boolean
         }
     ) => Promise<void>
     deleteEntry: (index: number) => Promise<void>
@@ -155,7 +152,6 @@ type InferenceStateType = {
 
 type OutputBuffer = {
     data: string
-    timings?: CompletionTimings
     error?: string
 }
 
@@ -454,7 +450,7 @@ export namespace Chats {
         },
 
         updateEntry: async (index: number, message: string, options = {}) => {
-            const { verifySwipeId, updateFinished, updateStarted, timings, resetTimings } = options
+            const { verifySwipeId, updateFinished, updateStarted } = options
             const messages = get()?.data?.messages
             if (!messages) return
 
@@ -479,8 +475,6 @@ export namespace Chats {
             }
             if (updateFinished) updatedSwipe.gen_finished = date
             if (updateStarted) updatedSwipe.gen_started = date
-            if (timings) updatedSwipe.timings = timings
-            if (resetTimings) updatedSwipe.timings = null
 
             await db.mutate.updateChatSwipe(updatedSwipe)
 
@@ -491,8 +485,6 @@ export namespace Chats {
             entry.token_count = undefined
             if (updateFinished) entry.gen_finished = date
             if (updateStarted) entry.gen_started = date
-            if (timings) entry.timings = timings
-            if (resetTimings) entry.timings = null
             messages[index].swipes[messages[index].swipe_id] = entry
 
             set((state) => ({
@@ -596,7 +588,6 @@ export namespace Chats {
                 Logger.error('Attempted to insert to buffer, but no valid entry was found!')
                 return
             }
-            if (buffer.timings) updatedSwipe.timings = buffer.timings
             if (!index) {
                 // this means there is no chat loaded, we need to update the db anyways
                 await db.mutate.updateChatSwipe(updatedSwipe)
@@ -604,7 +595,6 @@ export namespace Chats {
                 await get().updateEntry(index - 1, get().buffer.data, {
                     updateFinished: true,
                     verifySwipeId: cachedSwipeId,
-                    timings: buffer.timings,
                 })
         },
         insertLastToBuffer: () => {
@@ -1332,7 +1322,6 @@ export namespace Chats {
                 send_date: new Date(),
                 gen_started: new Date(),
                 gen_finished: new Date(),
-                timings: null,
             },
         ],
         attachments: [],

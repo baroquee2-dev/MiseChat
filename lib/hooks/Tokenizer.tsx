@@ -6,10 +6,9 @@ import { useDebounce } from './Debounce'
 
 export function useDebounceTokenizer(text: string, delay: number) {
     const [count, setCount] = useState(0)
-    const getTokenCount = Tokenizer.useTokenizerState((state) => state.getTokenCount)
 
     const debouncedCountTokens = useDebounce(async () => {
-        const tokenCount = await getTokenCount(text)
+        const tokenCount = await Tokenizer.getTokenCount(text)
         setCount(tokenCount)
     }, delay)
 

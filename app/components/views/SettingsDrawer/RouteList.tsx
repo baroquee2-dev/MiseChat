@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { FlatList, StyleSheet, Text, TouchableOpacity } from 'react-native'
 import Animated, { Easing, SlideInLeft } from 'react-native-reanimated'
 
-import { useAppMode } from '@lib/state/AppMode'
 import { Theme } from '@lib/theme/ThemeManager'
 
 type ButtonData = {
@@ -42,14 +41,12 @@ const DrawerButton = ({ item, index }: DrawerButtonProps) => {
 }
 
 const RouteList = () => {
-    const { appMode } = useAppMode()
     const { i18n } = useTranslation()
-    const paths = getPaths(appMode === 'remote')
     return (
         <FlatList
             key={i18n.language}
             showsVerticalScrollIndicator={false}
-            data={paths}
+            data={PATHS}
             renderItem={({ item, index }) => <DrawerButton item={item} index={index} />}
             keyExtractor={(item) => item.path.toString()}
         />
@@ -76,7 +73,7 @@ const useStyles = () => {
     })
 }
 
-const getPaths = (remote: boolean): ButtonData[] => [
+const PATHS: ButtonData[] = [
     {
         nameKey: 'nav.sampler',
         path: '/screens/SamplerManagerScreen',
@@ -87,17 +84,11 @@ const getPaths = (remote: boolean): ButtonData[] => [
         path: '/screens/FormattingManagerScreen',
         icon: 'profile',
     },
-    remote
-        ? {
-              nameKey: 'nav.api',
-              path: '/screens/ConnectionsManagerScreen',
-              icon: 'link',
-          }
-        : {
-              nameKey: 'nav.models',
-              path: '/screens/ModelManagerScreen',
-              icon: 'branches',
-          },
+    {
+        nameKey: 'nav.api',
+        path: '/screens/ConnectionsManagerScreen',
+        icon: 'link',
+    },
     {
         nameKey: 'nav.tts',
         path: '/screens/TTSManagerScreen',

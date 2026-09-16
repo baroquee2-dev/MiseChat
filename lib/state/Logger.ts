@@ -50,9 +50,6 @@ export namespace Logger {
                 partialize: (state) => ({
                     logs: state.logs,
                 }),
-                migrate: async (persistedState: any, version) => {
-                    //no migrations yet
-                },
             }
         )
     )

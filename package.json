@@ -32,12 +32,10 @@
     "@expo/vector-icons": "^15.0.3",
     "@react-native-community/slider": "5.2.0",
     "@shopify/flash-list": "2.0.2",
-    "@vali98/react-native-cpu-info": "^0.2.0",
     "@vali98/react-native-fs": "^0.2.4",
     "@vali98/react-native-png-utils": "^0.2.2",
     "babel-plugin-inline-import": "^3.0.0",
     "babel-plugin-react-compiler": "^19.0.0-beta-af1b7da-20250417",
-    "cui-llama.rn": "^1.11.14",
     "drizzle-kit": "^0.31.9",
     "drizzle-orm": "^0.45.2",
     "eslint-plugin-react-compiler": "^0.0.0-experimental-7c1344f-20241009",
@@ -124,10 +122,8 @@
       "reactNativeDirectoryCheck": {
         "exclude": [
           "react-native-background-actions",
-          "@vali98/react-native-cpu-info",
           "@vali98/react-native-fs",
-          "@vali98/react-native-png-utils",
-          "cui-llama.rn"
+          "@vali98/react-native-png-utils"
         ]
       }
     }

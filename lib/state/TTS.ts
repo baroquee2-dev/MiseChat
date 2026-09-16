@@ -536,7 +536,7 @@ export const useTTSStore = create<TTSState>()(
         {
             name: Storage.TTS,
             storage: createMMKVStorage(),
-            version: 4,
+            version: 1,
             partialize: (state) => ({
                 enabled: state.enabled,
                 auto: state.auto,

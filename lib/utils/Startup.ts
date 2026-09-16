@@ -1,22 +1,13 @@
-import { getCpuFeatures, getThreads } from '@vali98/react-native-cpu-info'
-import { Paths } from 'expo-file-system'
 import * as KeepAwake from 'expo-keep-awake'
 import { router } from 'expo-router'
 import { setBackgroundColorAsync as setUIBackgroundColor } from 'expo-system-ui'
-import { z } from 'zod'
 
-import { Model } from '@lib/engine/Local/Model'
-import { Tokenizer } from '@lib/engine/Tokenizer'
 import { setupNotifications } from '@lib/notifications/Notifications'
-import { useAppModeStore } from '@lib/state/AppMode'
 import { InstructFormats, Instructs } from '@lib/state/Instructs'
 import { SamplersManager } from '@lib/state/SamplerState'
-import { useTTSStore } from '@lib/state/TTS'
 
-import { AppDirectory, deleteFile, listFiles, makeDirectory, readStringAsync } from './File'
-import { AppSettings, AppSettingsDefault, Global } from '../constants/GlobalValues'
-import { migrateChatLayoutSetting } from '../constants/ChatLayout'
-import { Llama } from '../engine/Local/LlamaLocal'
+import { AppDirectory, makeDirectory } from './File'
+import { AppSettings, AppSettingsDefault } from '../constants/GlobalValues'
 import { Characters } from '../state/Characters'
 import { Chats } from '../state/Chat'
 import { Logger } from '../state/Logger'
@@ -38,7 +29,6 @@ export const loadChatOnInit = async () => {
 }
 
 const setAppDefaultSettings = () => {
-    migrateChatLayoutSetting()
     Object.keys(AppSettingsDefault).map((item) => {
         const data = mmkv.getBoolean(item)
         if (data !== undefined) return
@@ -53,114 +43,10 @@ const createDefaultCard = async () => {
     mmkv.set(AppSettings.CreateDefaultCard, false)
 }
 
-const setCPUFeatures = async () => {
-    const result = await getCpuFeatures()
-    mmkv.set(Global.CpuFeatures, JSON.stringify(result))
-}
-
-const migrateModelData_0_7_10_to_0_8_0 = () => {
-    // Fix for 0.7.10 -> 0.8.0 LocalModel data
-    // Attempt to parse model, if this fails, delete the key
-    const oldDef = `localmodel`
-    try {
-        const model = mmkv.getString(oldDef)
-        if (model) JSON.parse(model)
-    } catch (e) {
-        Logger.error('migrateModelData_0_7_10_to_0_8_0 Failed')
-        Logger.error(`${e}`)
-        mmkv.remove(oldDef)
-    }
-}
-
-const migrateModelData_0_8_4_to_0_8_5 = () => {
-    // `localmodel` is the definition of Global.LocalModel
-    const oldDef = `localmodel`
-    try {
-        const modelData = mmkv.getString(oldDef)
-        if (!modelData) return
-        const data = JSON.parse(modelData)
-        if (!data) return
-        mmkv.remove(oldDef)
-        Llama.useLlamaPreferencesStore.getState().setLastModelLoaded(data)
-    } catch (e) {
-        Logger.error('migrateModelData_0_8_4_to_0_8_5 Failed')
-        Logger.error(`${e}`)
-    }
-}
-
-const migrateTTSData_0_8_5_to_0_8_6 = () => {
-    /** previous Global enum data:
-        TTSSpeaker = 'ttsspeaker',
-        TTSEnable = 'ttsenable',
-        TTSAuto = `ttsauto`, 
-    */
-    if (mmkv.getBoolean('ttsauto')) {
-        mmkv.remove('ttsauto')
-        useTTSStore.getState().setAuto(true)
-    }
-    if (mmkv.getBoolean('ttsenable')) {
-        mmkv.remove('ttsenable')
-        useTTSStore.getState().setEnabled(true)
-    }
-    const speakerData = mmkv.getString('ttsspeaker')
-    if (speakerData) {
-        mmkv.remove('ttsspeaker')
-        try {
-            const voiceData = JSON.parse(speakerData)
-            const voiceSchema = z.object({
-                identifier: z.string(),
-                name: z.string(),
-                quality: z.enum(['Default', 'Enhanced']),
-                language: z.string(),
-            })
-            const result = voiceSchema.safeParse(voiceData)
-            if (result.success) {
-                useTTSStore.getState().setVoice(voiceData)
-            } else throw new Error('Schema validation failed')
-        } catch (e) {
-            Logger.error('migrateTTSData_0_8_5_to_0_8_6 Failed')
-            Logger.error(`${e}`)
-        }
-    }
-}
-
 export const generateDefaultDirectories = async () => {
-    // Removed: 'instruct', 'persona', 'presets', 'lorebooks'
     Object.values(AppDirectory).map((dir) => {
         makeDirectory(dir)
     })
-}
-
-const migratePresets_0_8_3_to_0_8_4 = async () => {
-    const presetPath = `${Paths.document.uri}presets`
-    const files = listFiles(presetPath)
-
-    if (files.length === 0) return
-    files.map(async (item) => {
-        try {
-            const data = await readStringAsync(`${presetPath}/${item}`)
-            SamplersManager.useSamplerStore.getState().addSamplerConfig({
-                data: JSON.parse(data),
-                name: item.replace('.json', ''),
-            })
-        } catch (e) {
-            Logger.error(`Failed to migrate preset ${item}: ${e}`)
-        }
-    })
-    deleteFile(presetPath)
-}
-
-const migrateAppMode_0_8_5_to_0_8_6 = () => {
-    // Old Global Value AppMode = 'appmode',
-    const oldKey = 'appmode'
-    const oldAppMode = mmkv.getString(oldKey)
-    if (!oldAppMode) return
-
-    if (oldAppMode === 'local' || oldAppMode === 'remote') {
-        useAppModeStore.getState().setAppMode(oldAppMode)
-    }
-    mmkv.remove(oldKey)
-    Logger.warn('Migrated appmode from 0.8.5 to 0.8.6')
 }
 
 const createDefaultUserData = async () => {
@@ -189,16 +75,9 @@ const setKeepAwake = async () => {
 }
 
 const setDefaultInstruct = () => {
-    const migrateKey = 'instruct-style-format-split-v1'
     Instructs.db.query.instructList().then(async (list) => {
         if (!list) {
             Logger.error('Instruct database Invalid, this should not happen! Please report this!')
-            return
-        }
-
-        if (!mmkv.getBoolean(migrateKey)) {
-            await Instructs.migrateToStyleFormatSplit()
-            mmkv.set(migrateKey, true)
             return
         }
 
@@ -217,24 +96,8 @@ const setDefaultInstruct = () => {
     })
 }
 
-const setCPUThreads = () => {
-    const threads = mmkv.getNumber(Global.CPUThreads)
-    if (threads) return
-    let newThreads = 8
-    try {
-        newThreads = getThreads()
-    } catch (e) {
-        Logger.error('Failed to set CPU Threads: ' + e)
-    }
-    Logger.info('Setting CPU Threads to ' + newThreads)
-    mmkv.set(Global.CPUThreads, newThreads)
-}
-
 export const startupApp = () => {
     console.log('[APP STARTED]: T1APT')
-    // DEV: Needed for Reset
-    //Chats.useChatState.getState().reset()
-    //Characters.useCharacterCard.getState().unloadCard()
 
     // Sets default preferences
     setAppDefaultSettings()
@@ -248,28 +111,11 @@ export const startupApp = () => {
     // Initialize the default card
     createDefaultCard()
 
-    // get fp16, i8mm and dotprod data
-    setCPUFeatures()
-
-    // set cpu thread count
-    setCPUThreads()
-
     // set keep awake settings
     setKeepAwake()
 
-    // Local Model Data in case external models are deleted
-    Model.verifyModelList()
-    Tokenizer.useTokenizerState.getState().loadModel()
-
     // Fix any missing samplers
     SamplersManager.useSamplerStore.getState().fixConfigs()
-
-    // migrations for old versions
-    migrateModelData_0_7_10_to_0_8_0()
-    migrateModelData_0_8_4_to_0_8_5()
-    migratePresets_0_8_3_to_0_8_4()
-    migrateTTSData_0_8_5_to_0_8_6()
-    migrateAppMode_0_8_5_to_0_8_6()
 
     const backgroundColor = Theme.useColorState.getState().color.neutral._100
     setUIBackgroundColor(backgroundColor)

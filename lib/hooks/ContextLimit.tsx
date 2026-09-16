@@ -1,20 +1,15 @@
 import { SamplerID } from '@lib/constants/SamplerData'
 import { APIConfiguration, APIValues } from '@lib/engine/API/APIBuilder.types'
 import { APIManager } from '@lib/engine/API/APIManagerState'
-import { Llama } from '@lib/engine/Local/LlamaLocal'
-import { useAppMode, useAppModeStore } from '@lib/state/AppMode'
 import { LiteLLMModels } from '@lib/state/LiteLLMModels'
 import { SamplersManager } from '@lib/state/SamplerState'
 import { getNestedValue } from '@lib/utils/Parsing'
 
 export const useContextLimit = (): number => {
-    const { appMode } = useAppMode()
-    const localLimit = Llama.useLlamaPreferencesStore((state) => state.config.context_length)
     const sampler = SamplersManager.useCurrentSampler()
     const samplerLimit = sampler?.data?.[SamplerID.CONTEXT_LENGTH] ?? 4096
     const { apiValue, apiConfig } = APIManager.useActiveValueTemplate()
 
-    if (appMode === 'local') return localLimit
     return resolveContextLimit(apiConfig, apiValue, samplerLimit)
 }
 
@@ -26,10 +21,7 @@ export const useContextLimit = (): number => {
  * set it too high, and providers don't always report it correctly).
  */
 export const getContextLimit = (): number => {
-    const appMode = useAppModeStore.getState().appMode
     const samplerLimit = SamplersManager.getCurrentSampler()?.[SamplerID.CONTEXT_LENGTH] ?? 4096
-
-    if (appMode === 'local') return Llama.useLlamaPreferencesStore.getState().config.context_length
 
     const connectionState = APIManager.useConnectionsStore.getState()
     const apiValue = connectionState.values[connectionState.activeIndex]

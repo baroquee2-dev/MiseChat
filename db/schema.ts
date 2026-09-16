@@ -138,7 +138,6 @@ export const chatSwipes = sqliteTable('chat_swipes', {
     gen_finished: integer('gen_finished', { mode: 'timestamp' })
         .notNull()
         .$defaultFn(() => new Date()),
-    timings: text('timings', { mode: 'json' }).$type<CompletionTimings>(),
 })
 
 /**
@@ -391,76 +390,11 @@ export const characterLorebooksRelations = relations(characterLorebooks, ({ one 
 
 // export const characterGroupChats = sqliteTable('character_group_chats', {})
 
-// Model Data
-
-export const model_data = sqliteTable('model_data', {
-    id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
-    file: text('file').notNull().unique(),
-    name: text('name').notNull(),
-    file_path: text('file_path').notNull().unique().default(''),
-    file_size: integer('file_size').notNull().default(0),
-    params: text('params').notNull(),
-    quantization: text('quantization').notNull(),
-    context_length: integer('context_length').notNull(),
-    architecture: text('architecture').notNull(),
-    create_date: integer('create_date', { mode: 'number' })
-        .$defaultFn(() => Date.now())
-        .notNull(),
-    last_modified: integer('last_modified', { mode: 'number' })
-        .$defaultFn(() => Date.now())
-        .notNull()
-        .$onUpdateFn(() => Date.now()),
-})
-
-export const model_mmproj_links = sqliteTable(
-    'model_mmproj_links',
-    {
-        model_id: integer('model_id', { mode: 'number' })
-            .notNull()
-            .references(() => model_data.id, { onDelete: 'cascade' }),
-
-        mmproj_id: integer('mmproj_id', { mode: 'number' })
-            .notNull()
-            .references(() => model_data.id, { onDelete: 'cascade' }),
-    },
-    (table) => {
-        return {
-            pk: primaryKey({ columns: [table.model_id, table.mmproj_id] }),
-        }
-    }
-)
-
-export const modelDataRelations = relations(model_data, ({ one }) => ({
-    mmprojLink: one(model_mmproj_links, {
-        relationName: 'model_to_mmproj',
-        fields: [model_data.id],
-        references: [model_mmproj_links.model_id],
-    }),
-    modelLink: one(model_mmproj_links, {
-        relationName: 'mmproj_to_model',
-        fields: [model_data.id],
-        references: [model_mmproj_links.mmproj_id],
-    }),
-}))
-
 // Types
 
-export type ModelDataType = typeof model_data.$inferSelect
 export type ChatSwipe = typeof chatSwipes.$inferSelect
 export type ChatEntryType = typeof chatEntries.$inferSelect
 export type ChatType = typeof chats.$inferSelect
 export type ChatAttachmentType = typeof chatAttachments.$inferSelect
 export type ChatKeyFactType = typeof chatKeyFacts.$inferSelect
 export type ChatKeyFactCategory = (typeof CHAT_KEY_FACT_CATEGORIES)[number]
-
-export type CompletionTimings = {
-    predicted_per_token_ms: number
-    predicted_per_second: number | null
-    predicted_ms: number
-    predicted_n: number
-
-    prompt_per_token_ms: number
-    prompt_per_second: number | null
-    prompt_ms: number
-    prompt_n: number
-}

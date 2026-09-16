@@ -36,10 +36,7 @@ export const useLipSyncSettings = create<LipSyncSettingsState>()(
         {
             name: Storage.LemonSlice,
             storage: createMMKVStorage(),
-            version: 2,
-            // v1 belonged to the standalone chat test page; its image and prompt
-            // fields are simply no longer persisted.
-            migrate: (persisted) => persisted as LipSyncSettingsState,
+            version: 1,
             partialize: (state) => ({
                 enabled: state.enabled,
                 apiKey: state.apiKey,

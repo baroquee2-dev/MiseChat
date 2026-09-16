@@ -1,75 +1,29 @@
-import { initLlama, LlamaContext } from 'cui-llama.rn'
-import { Asset } from 'expo-asset'
-import { create } from 'zustand'
+/**
+ * Token counts are estimated from character counts.
+ *
+ * Every provider tokenizes differently, and their real counts only come back with the
+ * response, so an exact figure would need a separate request per provider. These numbers
+ * only decide how much history fits under the context limit, so they lean high on purpose.
+ */
 
-import { useAppModeStore } from '@lib/state/AppMode'
-import { Logger } from '@lib/state/Logger'
-import { AppDirectory, copyFile, fileExists } from '@lib/utils/File'
+/** CJK text averages close to one token per character. */
+const CJK_PATTERN =
+    /[぀-ヿ㐀-䶿一-鿿豈-﫿ｦ-ﾟ가-힯]/g
+/** Other scripts average roughly four characters per token. */
+const CHARS_PER_TOKEN = 4
+/** Providers charge very different amounts per image; this is a deliberately high guess. */
+const TOKENS_PER_IMAGE = 512
 
-import { Llama } from './Local/LlamaLocal'
-
-type TokenizerState = {
-    model?: LlamaContext
-    tokenize: (text: string) => Promise<number[]>
-    getTokenCount: (text: string, image_urls?: string[]) => Promise<number>
-    loadModel: () => Promise<void>
+export const estimateTokenCount = (text: string, imageCount = 0) => {
+    const cjkCount = text.match(CJK_PATTERN)?.length ?? 0
+    const otherCount = text.length - cjkCount
+    return cjkCount + Math.ceil(otherCount / CHARS_PER_TOKEN) + imageCount * TOKENS_PER_IMAGE
 }
 
-const tokenizerModelDir = `${AppDirectory.Assets}llama3tokenizer.gguf`
-
 export namespace Tokenizer {
-    export const useTokenizerState = create<TokenizerState>()((set, get) => ({
-        model: undefined,
-        tokenize: async (text: string) => {
-            return (await get()?.model?.tokenize(text))?.tokens ?? []
-        },
-        // name this for trace stack
-        getTokenCount: async function getTokenCount(text: string, image_urls: string[] = []) {
-            const model = get().model
-            if (!model) {
-                Logger.warn('Tokenizer not loaded')
-                return 0
-            }
-            return (await model.tokenize(text)).tokens.length + image_urls.length * 512
-        },
-        loadModel: async () => {
-            if (get().model) return
-            try {
-                await importModelFromRes()
-                Logger.info('Loading Tokenizer')
-                const context = await initLlama({
-                    model: tokenizerModelDir,
-                    vocab_only: true,
-                    n_gpu_layers: 0,
-                    devices: ['CPU'],
-                })
-                Logger.info('Tokenizer Loaded')
-                set({ model: context })
-            } catch (e) {
-                Logger.error('Failed to load tokenizer: ' + e)
-            }
-        },
-    }))
+    export const getTokenCount = async (text: string, imageUrls: string[] = []) =>
+        estimateTokenCount(text, imageUrls.length)
 
-    const importModelFromRes = async () => {
-        if (fileExists(tokenizerModelDir)) return
-        Logger.info('Importing Tokenizer')
-        const [asset] = await Asset.loadAsync(require('./../../assets/models/llama3tokenizer.gguf'))
-        await asset.downloadAsync()
-        if (asset.localUri) copyFile({ from: asset.localUri, to: tokenizerModelDir })
-        else throw new Error('Failed to import asset')
-    }
-
-    export const getTokenizer = () => {
-        return useAppModeStore.getState().appMode === 'local'
-            ? Llama.useLlamaModelStore.getState().tokenLength
-            : Tokenizer.useTokenizerState.getState().getTokenCount
-    }
-
-    export const useTokenizer = () => {
-        const defaultTokenizer = useTokenizerState((state) => state.getTokenCount)
-        const llamaTokenizer = Llama.useLlamaModelStore((state) => state.tokenLength)
-        const appMode = useAppModeStore((state) => state.appMode)
-        return appMode === 'local' ? llamaTokenizer : defaultTokenizer
-    }
+    /** Kept as a getter so callers can hold one counter for a whole context build. */
+    export const getTokenizer = () => getTokenCount
 }

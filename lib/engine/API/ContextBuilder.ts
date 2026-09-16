@@ -1,7 +1,6 @@
 import { AppSettings } from '@lib/constants/GlobalValues'
 import i18n from '@lib/i18n'
 import { buildThinkRules } from '@lib/markdown/ThinkTags'
-import { useAppModeStore } from '@lib/state/AppMode'
 import { CharacterCardData, CharacterTokenCache } from '@lib/state/Characters'
 import { ChatEntry } from '@lib/state/Chat'
 import { defaultSystemPromptFormat, InstructTokenCache, InstructType } from '@lib/state/Instructs'
@@ -367,11 +366,6 @@ export const buildTextCompletionContext = async ({
 
     if (hasMedia) {
         Logger.errorToast(i18n.t('toast.textCompletionsNoMultimodal'))
-        if (useAppModeStore.getState().appMode === 'local') {
-            Logger.warn(
-                "[HINT] You probably have built-in templates disabled. Enable it in 'Formatting > Use Built-In Local Model' template"
-            )
-        }
     }
 
     Logger.info(`Approximate Context Size: ${message_acc_length + payloadLength} tokens`)

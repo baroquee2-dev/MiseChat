@@ -48,7 +48,6 @@ const FormattingManager = () => {
         ],
         [t]
     )
-    const [useTemplate, setUseTemplate] = useMMKVBoolean(AppSettings.UseModelTemplate)
     const { currentInstruct, loadInstruct, setCurrentInstruct } = Instructs.useInstruct(
         useShallow((state) => ({
             currentInstruct: state.data,
@@ -451,17 +450,6 @@ const FormattingManager = () => {
                                     description={t('instruct.sendFilteredDesc')}
                                     value={sendFilteredText}
                                     onChangeValue={setSendFilteredText}
-                                />
-                            </View>
-
-                            <View style={{ rowGap: spacing.m }}>
-                                <SectionTitle>{t('instruct.localTemplate')}</SectionTitle>
-
-                                <ThemedSwitch
-                                    label={t('instruct.useBuiltInTemplate')}
-                                    description={t('instruct.useBuiltInTemplateDesc')}
-                                    value={useTemplate}
-                                    onChangeValue={setUseTemplate}
                                 />
                             </View>
                         </View>

@@ -1,17 +1,5 @@
 import { z } from 'zod'
 
-const CompletionTimingsSchema = z.object({
-    predicted_per_token_ms: z.number(),
-    predicted_per_second: z.number().nullable(),
-    predicted_ms: z.number(),
-    predicted_n: z.number(),
-
-    prompt_per_token_ms: z.number(),
-    prompt_per_second: z.number().nullable(),
-    prompt_ms: z.number(),
-    prompt_n: z.number(),
-})
-
 const SwipeSchema = z.object({
     swipe: z.string(),
     id: z.number().optional(),
@@ -22,7 +10,6 @@ const SwipeSchema = z.object({
     active: z.boolean().optional().default(false),
     token_length: z.number().nullable().optional(),
     reset_length: z.number().nullable().optional(),
-    timings: CompletionTimingsSchema.nullable(),
 })
 
 const AttachmentSchema = z.object({
@@ -62,7 +49,6 @@ export const ChatImportSchema = z.object({
     messages: z.array(MessageSchema),
 })
 
-export type CompletionTimings = z.infer<typeof CompletionTimingsSchema>
 export type Swipe = z.infer<typeof SwipeSchema>
 export type Attachment = z.infer<typeof AttachmentSchema>
 export type Message = z.infer<typeof MessageSchema>

@@ -2,7 +2,6 @@ import BackgroundService from 'react-native-background-actions'
 import i18n from '@lib/i18n'
 
 import { AppSettings, APP_NAME, APP_SCHEME } from '@lib/constants/GlobalValues'
-import { useAppModeStore } from '@lib/state/AppMode'
 import { Chats, useInference } from '@lib/state/Chat'
 import { Instructs } from '@lib/state/Instructs'
 import { SamplersManager } from '@lib/state/SamplerState'
@@ -14,7 +13,6 @@ import { Logger } from '../state/Logger'
 import { APIBuilderParams, buildAndSendRequest } from './API/APIBuilder'
 import { APIConfiguration, APIValues } from './API/APIBuilder.types'
 import { APIManager } from './API/APIManagerState'
-import { localInference } from './LocalInference'
 import { Tokenizer } from './Tokenizer'
 
 export async function regenerateResponse(swipeId: number, regenCache: boolean = true) {
@@ -36,7 +34,6 @@ export async function regenerateResponse(swipeId: number, regenCache: boolean = 
         await Chats.useChatState.getState().updateEntry(messagesLength - 1, replacement, {
             updateFinished: true,
             updateStarted: true,
-            resetTimings: true,
         })
     }
     await generateResponse(swipeId)
@@ -73,37 +70,8 @@ export async function generateResponse(swipeId: number) {
     }
     Chats.useChatState.getState().startGenerating(swipeId)
     Logger.info(`Obtaining response.`)
-    const appMode = useAppModeStore.getState().appMode
-
-    if (appMode === 'local') {
-        await BackgroundService.start(localInference, completionTaskOptions)
-    } else {
-        await BackgroundService.start(chatInferenceStream, completionTaskOptions)
-    }
+    await BackgroundService.start(chatInferenceStream, completionTaskOptions)
 }
-// TODO: Use this
-/*
-const useGenerateResponse = () => {
-    const startGenerating = Chats.useChatState((state) => state.startGenerating)
-    const nowGenerating = useInference((state) => state.nowGenerating)
-    const appMode = useAppModeStore((state) => state.appMode)
-
-    const generateResponse = useCallback(
-        async (swipeId: number) => {
-            if (nowGenerating) {
-                Logger.infoToast(i18n.t('toast.generationInProgress'))
-                return
-            }
-            startGenerating(swipeId)
-            Logger.info(`Obtaining response.`)
-            const process = appMode === 'local' ? localInference : chatInferenceStream
-            await BackgroundService.start(process, completionTaskOptions)
-        },
-        [nowGenerating, appMode, startGenerating]
-    )
-
-    return generateResponse
-}*/
 
 async function chatInferenceStream() {
     const fields = await obtainFields()
@@ -185,7 +153,6 @@ const titleGeneratorStream = async (chatId: number) => {
                 send_date: new Date(),
                 gen_started: new Date(),
                 gen_finished: new Date(),
-                timings: null,
             },
         ],
         attachments: [],

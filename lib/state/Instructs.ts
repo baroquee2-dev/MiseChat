@@ -365,62 +365,7 @@ export namespace Instructs {
                 name: Storage.Instruct,
                 storage: createMMKVStorage(),
                 partialize: (state) => ({ data: state.data }),
-                version: 8,
-                migrate: async (persistedState: any, version) => {
-                    if (!version) {
-                        persistedState.data.timestamp = false
-                        persistedState.data.examples = true
-                        persistedState.data.format_type = 0
-                        Logger.info('[INSTRUCT] Migrated to v1')
-                    }
-                    if (version === 1) {
-                        persistedState.data.last_output_prefix = persistedState.data.output_prefix
-                        const entries = await database.query.instructs.findMany({
-                            columns: {
-                                id: true,
-                                output_prefix: true,
-                            },
-                        })
-                        entries.forEach(async (item) => {
-                            await database
-                                .update(instructs)
-                                .set({ last_output_prefix: item.output_prefix })
-                                .where(eq(instructs.id, item.id))
-                        })
-
-                        Logger.info('[INSTRUCT] Migrated to v2')
-                    }
-                    if (version === 2) {
-                        persistedState.data.scenario = true
-                        persistedState.data.personality = true
-                    }
-
-                    if (version === 3) {
-                        persistedState.data.hide_think_tags = true
-                    }
-
-                    if (version === 4) {
-                        persistedState.data.use_common_stop = true
-                    }
-
-                    if (version === 5) {
-                        persistedState.data.send_images = true
-                        persistedState.data.send_audio = true
-                        persistedState.data.send_documents = true
-                        persistedState.data.last_image_only = true
-                    }
-
-                    if (version === 6) {
-                        persistedState.data.system_prompt_format = defaultSystemPromptFormat
-                    }
-
-                    if (version === 7) {
-                        // Style/format split: selection is revalidated after DB cleanup
-                        Logger.info('[INSTRUCT] Migrated to v8 (style/format split)')
-                    }
-
-                    return persistedState
-                },
+                version: 1,
             }
         )
     )

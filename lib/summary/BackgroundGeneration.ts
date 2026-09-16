@@ -5,7 +5,6 @@ import type { APIConfiguration, APIValues } from '@lib/engine/API/APIBuilder.typ
 import { APIManager } from '@lib/engine/API/APIManagerState'
 import type { Message } from '@lib/engine/API/ContextBuilder'
 import { buildRequest } from '@lib/engine/API/RequestBuilder'
-import { useAppModeStore } from '@lib/state/AppMode'
 import { Instructs } from '@lib/state/Instructs'
 import { Logger } from '@lib/state/Logger'
 import { SamplersManager } from '@lib/state/SamplerState'
@@ -183,13 +182,6 @@ const generateRemote = async (prompt: BackgroundPrompt) => {
  */
 export const runBackgroundCompletion = async (prompt: BackgroundPrompt) => {
     try {
-        if (useAppModeStore.getState().appMode === 'local') {
-            const { generateLocalSummary } = await import('@lib/engine/LocalInference')
-            return await generateLocalSummary(
-                { system: prompt.system, user: prompt.user },
-                prompt.maxTokens
-            )
-        }
         return await generateRemote(prompt)
     } catch (error) {
         Logger.warn(`Failed to run ${prompt.label}: ${error}`)
