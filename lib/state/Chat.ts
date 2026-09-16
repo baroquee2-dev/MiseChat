@@ -1,6 +1,5 @@
 import { and, count, desc, eq, getTableColumns, inArray, like, sql } from 'drizzle-orm'
 import { randomUUID } from 'expo-crypto'
-import * as Notifications from 'expo-notifications'
 import mime from 'mime/lite'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
@@ -29,7 +28,7 @@ import {
 
 import { Characters } from './Characters'
 import { Logger } from './Logger'
-import { AppSettings, APP_NAME } from '../constants/GlobalValues'
+import { AppSettings } from '../constants/GlobalValues'
 import { mmkv } from '../storage/MMKV'
 
 export interface ChatSwipeState extends ChatSwipe {
@@ -156,35 +155,6 @@ type OutputBuffer = {
 }
 
 type ChatSwipeUpdated = Pick<ChatSwipe, 'swipe' | 'id'> & Partial<Omit<ChatSwipe, 'swipe' | 'id'>>
-// TODO: Functionalize and move elsewhere
-export const sendGenerateCompleteNotification = async () => {
-    const showMessage = mmkv.getBoolean(AppSettings.ShowNotificationText)
-
-    const notificationTitle = showMessage
-        ? (Characters.useCharacterStore.getState().card?.name ?? '')
-        : 'Response Complete'
-
-    const notificationText = showMessage
-        ? Chats.useChatState.getState().buffer?.data?.trim()
-        : `${APP_NAME} has finished a response.`
-
-    Notifications.scheduleNotificationAsync({
-        content: {
-            title: notificationTitle,
-            body: notificationText,
-            sound: mmkv.getBoolean(AppSettings.PlayNotificationSound),
-            vibrate: mmkv.getBoolean(AppSettings.VibrateNotification) ? [250, 125, 250] : undefined,
-            badge: 0,
-            data: {
-                chatId: Chats.useChatState.getState().data?.id,
-                characterId: Characters.useCharacterStore.getState().id,
-            },
-        },
-        trigger: null,
-    })
-    Notifications.setBadgeCountAsync(0)
-}
-
 export const useInference = create<InferenceStateType>((set, get) => ({
     abortFunction: async () => {
         set({ generationAborted: true })
@@ -203,7 +173,6 @@ export const useInference = create<InferenceStateType>((set, get) => ({
         }),
     stopGenerating: () => {
         set({ nowGenerating: false, currentSwipeId: undefined })
-        if (mmkv.getBoolean(AppSettings.NotifyOnComplete)) sendGenerateCompleteNotification()
     },
     markGenerationFailed: () => set({ generationFailed: true }),
     setAbort: (fn) => {

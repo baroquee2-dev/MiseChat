@@ -2,7 +2,6 @@ import * as KeepAwake from 'expo-keep-awake'
 import { router } from 'expo-router'
 import { setBackgroundColorAsync as setUIBackgroundColor } from 'expo-system-ui'
 
-import { setupNotifications } from '@lib/notifications/Notifications'
 import { Instructs } from '@lib/state/Instructs'
 import { SamplersManager } from '@lib/state/SamplerState'
 
@@ -97,9 +96,6 @@ export const startupApp = () => {
     generateDefaultDirectories()
     setDefaultUser()
     setDefaultInstruct()
-
-    // setup notifications
-    setupNotifications()
 
     // Initialize the default card
     createDefaultCard()

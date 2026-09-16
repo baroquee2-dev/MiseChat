@@ -75,12 +75,6 @@ module.exports = {
                     imageWidth: 200,
                 },
             ],
-            [
-                'expo-notifications',
-                {
-                    icon: APP_ICON,
-                },
-            ],
             './expo-build-plugins/gradlejvm.plugin.js',
             [
                 './expo-build-plugins/androidattributes.plugin.js',

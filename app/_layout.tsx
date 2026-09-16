@@ -17,7 +17,6 @@ import { KeyboardProvider } from 'react-native-keyboard-controller'
 import { AlertProvider } from '@components/views/Alert'
 import { PortalHost } from '@components/views/Portal'
 import '@lib/i18n'
-import { useAppStateNotificationObserver } from '@lib/notifications/Notifications'
 import { useDialogueFontsStore } from '@lib/state/DialogueFonts'
 import { LiteLLMModels } from '@lib/state/LiteLLMModels'
 import { Theme } from '@lib/theme/ThemeManager'
@@ -45,7 +44,6 @@ const Layout = () => {
         if (fontsLoaded) setFontsReady(true)
     }, [fontsLoaded, setFontsReady])
 
-    useAppStateNotificationObserver()
     LiteLLMModels.useDailyRefresh()
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>

@@ -59,7 +59,6 @@
     "expo-linking": "~57.0.4",
     "expo-local-authentication": "~57.0.2",
     "expo-localization": "~57.0.1",
-    "expo-notifications": "~57.0.7",
     "expo-router": "~57.0.8",
     "expo-speech": "~57.0.1",
     "expo-speech-recognition": "^56.0.1",

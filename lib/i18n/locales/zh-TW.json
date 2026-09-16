@@ -44,8 +44,6 @@
         "sortBy": "排序",
         "recent": "最近",
         "name": "名稱",
-        "hiderEnabled": "隱藏標籤已啟用",
-        "hiderDisabled": "隱藏標籤已關閉",
         "searchByTags": "依標籤搜尋",
         "filterTagsPlaceholder": "篩選標籤...",
         "searchByName": "依名稱搜尋",
@@ -215,7 +213,7 @@
         "chat": {
             "title": "聊天",
             "useFirstMessage": "使用開場白",
-            "useFirstMessageDesc": "關閉後新對話會從空白開始，部分模型需要此設定",
+            "useFirstMessageDesc": "關閉後新對話會從空白開始；替代開場白是掛在開場白訊息上的，因此也不會出現。",
             "loadOnStartup": "啟動時載入聊天",
             "loadOnStartupDesc": "啟動時載入最近一次的聊天",
             "autoLoadUser": "自動載入使用者",
@@ -237,9 +235,7 @@
             "regenerateDefault": "重新產生預設角色卡",
             "regenerateDefaultTitle": "重新產生預設角色卡",
             "regenerateDefaultDesc": "這會將內建範例角色卡加入你的角色列表。",
-            "createDefault": "建立預設角色卡",
-            "hiddenTags": "隱藏標籤",
-            "hiddenTagsDesc": "在角色列表中隱藏帶有下列標籤的角色。"
+            "createDefault": "建立預設角色卡"
         },
         "generation": {
             "title": "系統相關",
@@ -247,15 +243,6 @@
             "printContextDesc": "將生成用的 context 印到日誌以便除錯",
             "bypassContext": "略過 Context 長度限制",
             "bypassContextDesc": "組裝提示詞時忽略 context 長度上限"
-        },
-        "notifications": {
-            "title": "通知",
-            "enable": "啟用通知",
-            "enableDesc": "AI 回覆完成時傳送通知",
-            "sound": "通知音效",
-            "vibrate": "通知震動",
-            "showText": "在通知中顯示文字",
-            "showTextDesc": "通知內容包含回覆文字"
         },
         "screen": {
             "title": "螢幕",
@@ -647,11 +634,6 @@
         "githubRepo": "Github 儲存庫",
         "authRequired": "需要驗證",
         "tryAgain": "再試一次"
-    },
-    "permission": {
-        "title": "需要權限",
-        "notificationDesc": "{{app}} 需要通知權限才能傳送通知。",
-        "openSettings": "開啟權限設定"
     },
     "avatarViewer": {
         "editCharacter": "編輯角色",
