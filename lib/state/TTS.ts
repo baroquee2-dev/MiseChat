@@ -21,6 +21,7 @@ import i18n from '@lib/i18n'
 import { isLipSyncVoicing } from '@lib/state/LemonSlice'
 import { Logger } from '@lib/state/Logger'
 import { createMMKVStorage } from '@lib/storage/MMKV'
+import { extractSpeech, type SpeechMode } from '@lib/utils/SpeechText'
 
 import { Chats, useInference } from './Chat'
 
@@ -59,6 +60,9 @@ type TTSState = {
     setCartesiaModel: (model: string) => void
     setCartesiaLanguage: (language: string) => void
     setLiveTTS: (b: boolean) => void
+    /** Which parts of a reply are read aloud. */
+    speechMode: SpeechMode
+    setSpeechMode: (mode: SpeechMode) => void
 
     speak: (text: string, onDone?: () => void, onStop?: () => void) => void
     handleEndGeneration: (lastIndex: number, text: string) => Promise<void>
@@ -116,6 +120,8 @@ export const useTTS = () => {
         setCartesiaLanguage,
         live,
         setLive,
+        speechMode,
+        setSpeechMode,
     } = useTTSStore(
         useShallow((state) => ({
             startTTS: state.startTTS,
@@ -151,6 +157,8 @@ export const useTTS = () => {
             setCartesiaLanguage: state.setCartesiaLanguage,
             live: state.liveTTS,
             setLive: state.setLiveTTS,
+            speechMode: state.speechMode,
+            setSpeechMode: state.setSpeechMode,
         }))
     )
     return {
@@ -187,6 +195,8 @@ export const useTTS = () => {
         setCartesiaLanguage,
         live,
         setLive,
+        speechMode,
+        setSpeechMode,
     }
 }
 
@@ -225,9 +235,18 @@ export const useTTSStore = create<TTSState>()(
             cartesiaModel: 'sonic-3.6',
             cartesiaLanguage: 'zh',
             activeChatIndex: undefined,
+            speechMode: 'auto',
+            setSpeechMode: (mode) => set({ speechMode: mode }),
             startTTS: async (text: string, index: number) => {
                 const clearIndex = () => {
                     if (get().activeChatIndex === index) set({ activeChatIndex: undefined })
+                }
+
+                const spoken = extractSpeech(text, get().speechMode)
+                if (!spoken.trim()) {
+                    Logger.info('Nothing to speak in this message')
+                    clearIndex()
+                    return
                 }
 
                 const currentSpeaker = get().voice
@@ -243,7 +262,7 @@ export const useTTSStore = create<TTSState>()(
                     set({ activeChatIndex: index })
                     try {
                         await queueElevenLabsSpeech(
-                            text,
+                            spoken,
                             get().elevenLabsApiKey,
                             get().elevenLabsVoiceId,
                             get().elevenLabsModel,
@@ -267,7 +286,7 @@ export const useTTSStore = create<TTSState>()(
                     set({ activeChatIndex: index })
                     try {
                         await queueGeminiSpeech(
-                            text,
+                            spoken,
                             geminiApiKey,
                             get().geminiVoiceName,
                             get().geminiModel,
@@ -290,7 +309,7 @@ export const useTTSStore = create<TTSState>()(
                     set({ activeChatIndex: index })
                     try {
                         await queueCartesiaSpeech(
-                            text,
+                            spoken,
                             get().cartesiaApiKey,
                             get().cartesiaVoiceId,
                             get().cartesiaModel,
@@ -312,14 +331,14 @@ export const useTTSStore = create<TTSState>()(
                 if (await Speech.isSpeakingAsync()) await Speech.stop()
                 const filter = /([。…！？、!?.,*"])/
                 const filteredchunks: string[] = []
-                const chunks = text.split(filter)
+                const chunks = spoken.split(filter)
                 chunks.forEach((item, index) => {
                     if (!filter.test(item) && item) return filteredchunks.push(item)
                     if (index > 0)
                         filteredchunks[filteredchunks.length - 1] =
                             filteredchunks[filteredchunks.length - 1] + item
                 })
-                if (filteredchunks.length === 0) filteredchunks.push(text)
+                if (filteredchunks.length === 0) filteredchunks.push(spoken)
 
                 const cleanedchunks = filteredchunks.map((item) =>
                     item.replaceAll(/[*"]/g, '').trim()
@@ -496,7 +515,7 @@ export const useTTSStore = create<TTSState>()(
                 const buffer = get().buffer
 
                 if (!get().pauseLive && buffer.trim()) {
-                    const clean = cleanMarkdown(buffer)
+                    const clean = cleanMarkdown(extractSpeech(buffer, get().speechMode))
                     if (clean) {
                         set({ activeChatIndex: lastIndex })
                         get().speak(clean, () => set({ activeChatIndex: undefined }))
@@ -523,7 +542,7 @@ export const useTTSStore = create<TTSState>()(
                 if (lastMatchIndex !== -1) {
                     const fullSentence = newBuffer.slice(0, lastMatchIndex).trim()
                     const remainder = newBuffer.slice(lastMatchIndex)
-                    const clean = cleanMarkdown(fullSentence)
+                    const clean = cleanMarkdown(extractSpeech(fullSentence, get().speechMode))
                     if (clean) {
                         get().speak(clean)
                     }
@@ -543,6 +562,7 @@ export const useTTSStore = create<TTSState>()(
                 voice: state.voice,
                 rate: state.rate,
                 liveTTS: state.liveTTS,
+                speechMode: state.speechMode,
                 provider: state.provider,
                 elevenLabsApiKey: state.elevenLabsApiKey,
                 elevenLabsVoiceId: state.elevenLabsVoiceId,

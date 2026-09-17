@@ -579,7 +579,16 @@
             "es": "西班牙文（es）",
             "pt": "葡萄牙文（pt）"
         },
-        "friendlyGuide": "友善導覽"
+        "friendlyGuide": "友善導覽",
+        "speechMode": {
+            "title": "唸稿範圍",
+            "all": "全部唸",
+            "allDesc": "整則回覆都唸，包含敘述。",
+            "auto": "只唸台詞（自動判斷）",
+            "autoDesc": "有引號就只唸引號內容；沒有引號時，去掉星號、括號與方括號包起來的敘述，唸其餘部分。",
+            "quotes": "只唸引號內",
+            "quotesDesc": "只唸引號裡的內容。整則沒有台詞時就不發聲。"
+        }
     },
     "characterEditor": {
         "title": "編輯角色",

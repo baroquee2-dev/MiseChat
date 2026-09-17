@@ -579,7 +579,16 @@
             "es": "Spanish (es)",
             "pt": "Portuguese (pt)"
         },
-        "friendlyGuide": "Friendly Guide"
+        "friendlyGuide": "Friendly Guide",
+        "speechMode": {
+            "title": "What to Read",
+            "all": "Everything",
+            "allDesc": "Reads the whole reply, narration included.",
+            "auto": "Dialogue (automatic)",
+            "autoDesc": "Reads what is inside quotes. When a message has none, the narration in asterisks, brackets and parentheses is dropped and the rest is read.",
+            "quotes": "Quoted text only",
+            "quotesDesc": "Reads only what is inside quotes. A message with no dialogue stays silent."
+        }
     },
     "characterEditor": {
         "title": "Edit Character",

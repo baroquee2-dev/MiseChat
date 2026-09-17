@@ -17,6 +17,7 @@ import { Logger } from '@lib/state/Logger'
 import { useTTS, type TTSProvider } from '@lib/state/TTS'
 import { Theme } from '@lib/theme/ThemeManager'
 import { groupBy } from '@lib/utils/Array'
+import { SPEECH_MODES, type SpeechMode } from '@lib/utils/SpeechText'
 
 type LanguageListItem = {
     [key: string]: Speech.Voice[]
@@ -164,6 +165,8 @@ const TTSManagerScreen = () => {
         setCartesiaLanguage,
         startTTS,
         stopTTS,
+        speechMode,
+        setSpeechMode,
     } = useTTS()
     const geminiApiKey = useGeminiApiKey()
     const [lang, setLang] = useState(voice?.language ?? 'en-US')
@@ -369,6 +372,19 @@ const TTSManagerScreen = () => {
                 value={rate}
                 onValueChange={setRate}
             />
+
+            <SectionTitle style={{ marginTop: 8 }}>{t('tts.speechMode.title')}</SectionTitle>
+            <DropdownSheet
+                selected={speechMode}
+                data={SPEECH_MODES}
+                labelExtractor={(item) => t(`tts.speechMode.${item}`)}
+                onChangeValue={(item: SpeechMode) => setSpeechMode(item)}
+                modalTitle={t('tts.speechMode.title')}
+                closeOnSelect
+            />
+            <Text style={{ color: color.text._400, paddingBottom: 4 }}>
+                {t(`tts.speechMode.${speechMode}Desc`)}
+            </Text>
 
             <SectionTitle style={{ marginTop: 8 }}>{t('tts.speechProvider')}</SectionTitle>
             <DropdownSheet
