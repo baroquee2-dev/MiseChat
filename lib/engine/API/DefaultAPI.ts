@@ -410,7 +410,6 @@ export const defaultTemplates: APIConfiguration[] = [
             useModel: true,
             multipleModels: false,
             useGeminiGrounding: true,
-            rejectsTrailingAssistant: true,
         },
 
         request: {
