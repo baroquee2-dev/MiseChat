@@ -715,7 +715,7 @@
         "importFailed": "匯入失敗：{{error}}"
     },
     "memory": {
-        "autoSummaryDesc": "開啟後，對話會在達到設定的輪數或字數時自動產生摘要，作為角色的長期記憶。",
+        "autoSummaryDesc": "開啟後，對話累積到一定長度時會自動整理成摘要，作為角色的長期記憶；快接近模型的上下文上限時也會提早整理。",
         "autoExtractKeyFacts": "關鍵事實自動提取",
         "autoExtractKeyFactsDesc": "開啟後，系統會在自動摘要的同一時機從對話中擷取關鍵事實，以對話為單位儲存，並在後續回覆中注入為背景資訊。",
         "contentManagement": "內容管理",

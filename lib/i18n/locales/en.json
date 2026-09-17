@@ -715,7 +715,7 @@
         "importFailed": "Failed to import: {{error}}"
     },
     "memory": {
-        "autoSummaryDesc": "When enabled, conversations will automatically generate a summary after reaching the configured turn or character threshold to serve as the character's long-term memory.",
+        "autoSummaryDesc": "Summarises the conversation into the character's long term memory once it has grown enough, and sooner when it approaches the model's context limit.",
         "autoExtractKeyFacts": "Auto Extract Key Facts",
         "autoExtractKeyFactsDesc": "When enabled, key facts are extracted from the conversation on the same schedule as the auto summary and stored per chat, then injected as background for later replies.",
         "contentManagement": "Content Management",
