@@ -199,6 +199,21 @@ export const buildChatCompletionContext = async ({
         })
 
     const output = [...payload, ...messageBuffer.reverse()]
+
+    // Continuing a reply is expressed by ending on the assistant's own turn. Providers
+    // that refuse that shape need the request to end on a user turn instead, so the
+    // instruction that would have been implicit is spelled out.
+    const lastTurn = output.at(-1)
+    if (
+        apiConfig.features.rejectsTrailingAssistant &&
+        lastTurn?.role === completionFeats.assistantRole
+    ) {
+        output.push({
+            role: completionFeats.userRole,
+            [completionFeats.contentName]: CONTINUE_INSTRUCTION,
+        })
+    }
+
     Logger.info(`Approximate Context Size: ${total_length} tokens`)
     Logger.info(`${(performance.now() - delta).toFixed(2)}ms taken to build context`)
     if (mmkv.getBoolean(AppSettings.PrintContext)) {
@@ -222,6 +237,11 @@ const thinkRule = buildThinkRules()
 
 /** Once a summary exists, raw history is hard-capped to this many recent turns. */
 const MAX_TURNS_WITH_SUMMARY = 20
+
+/** Spelled out for providers that cannot take a reply to continue as the last turn. */
+const CONTINUE_INSTRUCTION =
+    'Continue your previous message from exactly where it stops. Do not repeat any of it, ' +
+    'do not start over, and do not add any preface or commentary.'
 
 const formatSummaryContext = (summary?: string) => {
     if (!summary?.trim()) return ''

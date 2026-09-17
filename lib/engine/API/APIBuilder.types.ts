@@ -41,6 +41,12 @@ export interface APIFeatures {
     useModel: boolean
     multipleModels: boolean
     useGeminiGrounding?: boolean
+    /**
+     * Some providers reject a request whose last turn is the assistant's, which is how
+     * continuing a reply is expressed. Gemini answers such a request with
+     * "Requests ending with a model turn are not supported."
+     */
+    rejectsTrailingAssistant?: boolean
 }
 
 export interface APIRequestFormat {
