@@ -309,7 +309,7 @@
     },
     "themes": {
         "title": "主題",
-        "useSystemDark": "使用系統深色模式",
+        "useSystemDark": "跟著手機的深色模式切換",
         "import": "匯入主題",
         "paste": "貼上主題",
         "getThemes": "取得主題",
@@ -320,7 +320,8 @@
         "deleteTitle": "刪除主題",
         "deleteDesc": "確定要刪除「{{name}}」嗎？此操作無法復原！",
         "deleteConfirm": "刪除主題",
-        "importFailed": "匯入失敗：{{error}}"
+        "importFailed": "匯入失敗：{{error}}",
+        "useSystemDarkDesc": "開啟後不再固定用同一個主題，而是跟著手機的深色模式設定切換（部分手機稱為深色主題）。請用下方每個主題旁的 ☀️ 與 🌙 指定淺色與深色模式各自使用哪個主題。"
     },
     "chatStyle": {
         "title": "聊天樣式",

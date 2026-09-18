@@ -309,7 +309,7 @@
     },
     "themes": {
         "title": "Themes",
-        "useSystemDark": "Use System Dark Mode",
+        "useSystemDark": "Follow the Phone's Light and Dark Mode",
         "import": "Import Theme",
         "paste": "Paste Theme",
         "getThemes": "Get Themes",
@@ -320,7 +320,8 @@
         "deleteTitle": "Delete Theme",
         "deleteDesc": "Are you sure you want to delete \"{{name}}\"? This cannot be undone!",
         "deleteConfirm": "Delete Theme",
-        "importFailed": "Failed to import: {{error}}"
+        "importFailed": "Failed to import: {{error}}",
+        "useSystemDarkDesc": "Switches themes with your phone instead of staying on one. Use the sun and moon buttons below to choose which theme each mode gets."
     },
     "chatStyle": {
         "title": "Chat Styling",
