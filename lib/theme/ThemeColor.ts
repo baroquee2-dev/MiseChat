@@ -438,6 +438,57 @@ export namespace DefaultColorSchemes {
         shadow: '#aaa',
     }
 
+    export const christmas: ThemeColor = {
+        version: 1,
+        name: 'Christmas',
+        primary: {
+            _100: '#319441',
+            _200: '#349b44',
+            _300: '#37a549',
+            _400: '#3bb04d',
+            _500: '#3fbe54',
+            _600: '#5bc86d',
+            _700: '#7fd48d',
+            _800: '#9fdfa9',
+            _900: '#f9fdf9',
+        },
+        neutral: {
+            _100: '#7e151b',
+            _200: '#8a171d',
+            _300: '#971920',
+            _400: '#a71b24',
+            _500: '#cb212b',
+            _600: '#e14650',
+            _700: '#e87178',
+            _800: '#ee959b',
+            _900: '#f3b7bb',
+        },
+        error: {
+            _100: '#ffffff',
+            _200: '#ffffff',
+            _300: '#fff8b7',
+            _400: '#fff06b',
+            _500: '#ffe927',
+            _600: '#fee400',
+            _700: '#fbe200',
+            _800: '#f9e000',
+            _900: '#f8df00',
+        },
+        text: {
+            _100: '#ebf7ed',
+            _200: '#d1edd5',
+            _300: '#96d7a1',
+            _400: '#56bf67',
+            _500: '#3c9f4c',
+            _600: '#2f7d3c',
+            _700: '#235b2c',
+            _800: '#16391b',
+            _900: '#000000',
+        },
+        quote: '#a8e8ff',
+        shadow: '#000000',
+    }
+
     export const schemes = [
         lavenderDark,
         lavenderLight,
@@ -447,5 +498,6 @@ export namespace DefaultColorSchemes {
         retroGreen,
         blueScreen,
         sandLight,
+        christmas,
     ]
 }
