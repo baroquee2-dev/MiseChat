@@ -109,10 +109,9 @@ const LemonSliceScreen = () => {
                 <View style={styles.badgeRow}>
                     <Text style={styles.badge}>{t('lemonSlice.experimental')}</Text>
                 </View>
-                <Text style={styles.hint}>{t('lemonSlice.description')}</Text>
-
                 <ThemedSwitch
                     label={t('lemonSlice.enable')}
+                    description={t('lemonSlice.description')}
                     value={settings.enabled}
                     onChangeValue={handleToggle}
                 />

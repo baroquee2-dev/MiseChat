@@ -773,7 +773,7 @@
     "lemonSlice": {
         "title": "動畫對嘴",
         "experimental": "測試性功能",
-        "description": "連線後，角色聊天中的立繪會換成 LemonSlice 即時動畫，AI 每次回覆都會依你的語音設定念出並同步動嘴。中斷連線後恢復原本的靜態立繪。",
+        "description": "連線後，角色聊天中的立繪會換成 LemonSlice 即時動畫，AI 每次回覆都會依你的語音設定念出並同步動嘴。中斷連線後恢復原本的靜態立繪。需要分別到 LemonSlice 與 Daily 各申請一組金鑰；LemonSlice 需要付費，Daily 通常免費且只負責傳輸通話。",
         "enable": "啟用 LemonSlice 動畫對嘴",
         "reminder": "按連線時間計費，角色沒在講話也會扣點。聊天結束請務必主動按「中斷連線」。另外連續 {{seconds}} 秒沒有任何操作也會自動斷線。",
         "apiKey": "LemonSlice API 金鑰",

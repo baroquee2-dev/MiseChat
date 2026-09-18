@@ -773,7 +773,7 @@
     "lemonSlice": {
         "title": "Animated Lip Sync",
         "experimental": "Experimental",
-        "description": "While connected, the character portrait in chat is replaced by a live LemonSlice avatar that speaks each AI reply using your Voice settings. Disconnecting brings back the static portrait.",
+        "description": "Swaps the character portrait in chat for a live LemonSlice animation that speaks each reply with your voice settings and moves its mouth in time. Disconnecting brings the still portrait back. It needs a key from LemonSlice and another from Daily; LemonSlice charges for it, while Daily is usually free and only carries the call.",
         "enable": "Enable LemonSlice lip sync",
         "reminder": "Billed by connection time, even while the character is silent. Always press Disconnect when you finish chatting. The session also ends by itself after {{seconds}} seconds without any activity.",
         "apiKey": "LemonSlice API key",
