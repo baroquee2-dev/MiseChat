@@ -338,7 +338,7 @@ export namespace DefaultColorSchemes {
 
     export const blueScreen: ThemeColor = {
         version: 1,
-        name: 'Windows當機(BSOD)',
+        name: 'Ctrl+Alt+Del',
         primary: {
             _100: '#ae8b04',
             _200: '#b48f05',
