@@ -489,6 +489,57 @@ export namespace DefaultColorSchemes {
         shadow: '#000000',
     }
 
+    export const skyLight: ThemeColor = {
+        version: 1,
+        name: 'Sky',
+        primary: {
+            _100: '#bee4f6',
+            _200: '#8ecfef',
+            _300: '#59b8e7',
+            _400: '#23a1e0',
+            _500: '#1c8bc1',
+            _600: '#17729f',
+            _700: '#125d81',
+            _800: '#0e4865',
+            _900: '#0b354a',
+        },
+        neutral: {
+            _100: '#d0edfb',
+            _200: '#c2e8fa',
+            _300: '#9ad8f7',
+            _400: '#6fc8f3',
+            _500: '#40b6f0',
+            _600: '#13a1e6',
+            _700: '#0f81ba',
+            _800: '#0b628d',
+            _900: '#08435f',
+        },
+        error: {
+            _100: '#f2d6d6',
+            _200: '#e6a3a3',
+            _300: '#d98080',
+            _400: '#cc5c5c',
+            _500: '#bf3939',
+            _600: '#a62e2e',
+            _700: '#8c2525',
+            _800: '#731c1c',
+            _900: '#5c1414',
+        },
+        text: {
+            _100: '#093c54',
+            _200: '#0f618a',
+            _300: '#106791',
+            _400: '#168ac3',
+            _500: '#37aee9',
+            _600: '#89cff2',
+            _700: '#c3e7f8',
+            _800: '#ddf1fb',
+            _900: '#f2fafe',
+        },
+        quote: '#8a4c00',
+        shadow: '#aaa',
+    }
+
     export const schemes = [
         lavenderDark,
         lavenderLight,
@@ -499,5 +550,6 @@ export namespace DefaultColorSchemes {
         blueScreen,
         sandLight,
         christmas,
+        skyLight,
     ]
 }
