@@ -802,5 +802,30 @@
         "deviceUnsupported": "裝置內建語音無法驅動對嘴，請在語音設定改用 ElevenLabs、Gemini 或 Cartesia。",
         "deviceVoice": "裝置語音",
         "providerDisconnected": "已切換為裝置語音，動畫對嘴已斷線"
+    },
+    "authorNote": {
+        "title": "劇情作弊器",
+        "hint": "寫下你想要的劇情走向，這段對話的每次回覆都會參考。內容不會出現在對話裡，角色也不知道你寫了什麼。",
+        "placeholder": "例如：推進劇情，不要停在原地打轉",
+        "suggestions": "試試這些",
+        "suggestion": {
+            "pace": "推進劇情，不要原地打轉",
+            "scene": "多描寫環境與氣氛",
+            "person": "保持第三人稱敘事",
+            "tone": "語氣冷淡一點"
+        },
+        "clear": "清除",
+        "saved": "已儲存",
+        "cleared": "已清除",
+        "saveFailed": "儲存失敗",
+        "missingChat": "找不到這段對話",
+        "active": "劇情作弊器生效中",
+        "toggle": "啟用劇情作弊器",
+        "enabled": "生效中",
+        "disabled": "已關閉",
+        "turnedOn": "劇情作弊器已開啟",
+        "turnedOff": "劇情作弊器已關閉",
+        "emptyHint": "還沒寫內容，寫了才會生效",
+        "equivalent": "這就是其他 AI 聊天工具所說的 Author's Note（作者筆記）。"
     }
 }

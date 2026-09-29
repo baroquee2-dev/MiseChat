@@ -107,6 +107,12 @@ export const chats = sqliteTable('chats', {
     summary_updated_at: integer('summary_updated_at', { mode: 'number' }),
     summary_turn_count: integer('summary_turn_count', { mode: 'number' }).notNull().default(0),
     summary_token_count: integer('summary_token_count', { mode: 'number' }).notNull().default(0),
+    /** Author's note: steering text injected near the end of this chat's context. */
+    author_note: text('author_note').notNull().default(''),
+    /** Off keeps the note stored but out of the context; empty text counts as off too. */
+    author_note_enabled: integer('author_note_enabled', { mode: 'boolean' })
+        .notNull()
+        .default(true),
 })
 
 export const chatEntries = sqliteTable('chat_entries', {

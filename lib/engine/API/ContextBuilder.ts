@@ -38,6 +38,7 @@ export interface ContextBuilderParams {
     maxLength: number
     cache: TokenCache
     summary?: string
+    authorNote?: string
     keyFacts?: ChatKeyFactType[]
     bypassContextLength?: boolean
     messageLoader?: MessageLoader
@@ -68,6 +69,7 @@ export const buildChatCompletionContext = async ({
     user,
     cache,
     summary,
+    authorNote,
     keyFacts,
     instruct,
     tokenizer,
@@ -199,6 +201,18 @@ export const buildChatCompletionContext = async ({
         })
 
     const output = [...payload, ...messageBuffer.reverse()]
+
+    if (authorNote?.trim()) {
+        // Never before the system prompt, and never past the start of the history.
+        const insertAt = Math.max(1, output.length - AUTHOR_NOTE_DEPTH)
+        output.splice(insertAt, 0, {
+            role: completionFeats.systemRole,
+            [completionFeats.contentName]: replaceMacrosInternal(
+                `[Author's note: ${authorNote.trim()}]`,
+                instruct
+            ),
+        })
+    }
     Logger.info(`Approximate Context Size: ${total_length} tokens`)
     Logger.info(`${(performance.now() - delta).toFixed(2)}ms taken to build context`)
     if (mmkv.getBoolean(AppSettings.PrintContext)) {
@@ -222,6 +236,13 @@ const thinkRule = buildThinkRules()
 
 /** Once a summary exists, raw history is hard-capped to this many recent turns. */
 const MAX_TURNS_WITH_SUMMARY = 20
+
+/**
+ * How many messages from the end the author's note sits. Attention favours the end
+ * of the prompt, so steering placed here keeps working in a long chat, while still
+ * leaving the latest turns closest to the model.
+ */
+const AUTHOR_NOTE_DEPTH = 3
 
 const formatSummaryContext = (summary?: string) => {
     if (!summary?.trim()) return ''

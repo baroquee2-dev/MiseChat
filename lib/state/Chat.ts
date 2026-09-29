@@ -108,6 +108,8 @@ export interface ChatState {
     renameChat: (chatId: number, name: string) => void
     setAutoSummary: (enabled: boolean) => Promise<void>
     setChatSummary: (chatId: number, summary: string) => Promise<void>
+    /** Author's note for this chat, injected near the end of its context. */
+    setAuthorNote: (chatId: number, note: string, enabled?: boolean) => Promise<void>
     refreshKeyFacts: (chatId: number) => Promise<void>
     // swipe data
     swipe: (index: number, direction: number) => Promise<boolean>
@@ -642,6 +644,16 @@ export namespace Chats {
                 }
             })
         },
+        setAuthorNote: async (chatId: number, note: string, enabled = true) => {
+            const trimmed = note.trim()
+            await db.mutate.updateAuthorNote(chatId, trimmed, enabled)
+            set((state) => {
+                if (!state.data || state.data.id !== chatId) return state
+                return {
+                    data: { ...state.data, author_note: trimmed, author_note_enabled: enabled },
+                }
+            })
+        },
         refreshKeyFacts: async (chatId: number) => {
             if (get().data?.id !== chatId) return
             const keyFacts = await db.query.keyFacts(chatId)
@@ -1003,6 +1015,17 @@ export namespace Chats {
                 await database
                     .update(chats)
                     .set({ auto_summary: enabled })
+                    .where(eq(chats.id, chatId))
+            }
+
+            export const updateAuthorNote = async (
+                chatId: number,
+                note: string,
+                enabled: boolean
+            ) => {
+                await database
+                    .update(chats)
+                    .set({ author_note: note, author_note_enabled: enabled })
                     .where(eq(chats.id, chatId))
             }
 

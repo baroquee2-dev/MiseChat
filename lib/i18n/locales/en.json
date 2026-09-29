@@ -802,5 +802,30 @@
         "deviceUnsupported": "Device voice cannot drive lip sync. Switch Voice settings to ElevenLabs, Gemini or Cartesia.",
         "deviceVoice": "Device voice",
         "providerDisconnected": "Switched to device voice — lip sync disconnected"
+    },
+    "authorNote": {
+        "title": "Plot Cheat",
+        "hint": "Write where you want the story to go. Every reply in this chat follows it. The text never appears in the conversation and the character never sees it.",
+        "placeholder": "For example: move the story along, do not linger",
+        "suggestions": "Try one of these",
+        "suggestion": {
+            "pace": "Move the story along, do not linger",
+            "scene": "Describe the surroundings and mood more",
+            "person": "Keep the narration in third person",
+            "tone": "Keep the tone cooler"
+        },
+        "clear": "Clear",
+        "saved": "Saved",
+        "cleared": "Cleared",
+        "saveFailed": "Could not save",
+        "missingChat": "That chat no longer exists",
+        "active": "Plot Cheat is on",
+        "toggle": "Use Plot Cheat",
+        "enabled": "On",
+        "disabled": "Off",
+        "turnedOn": "Plot Cheat is on",
+        "turnedOff": "Plot Cheat is off",
+        "emptyHint": "Nothing written yet, so it stays off",
+        "equivalent": "This is what other AI chat apps call an Author's Note."
     }
 }

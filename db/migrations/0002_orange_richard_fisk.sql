@@ -1,0 +1,1 @@
+ALTER TABLE `chats` ADD `author_note` text DEFAULT '' NOT NULL;

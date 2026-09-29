@@ -15,6 +15,20 @@
       "when": 1789586900881,
       "tag": "0001_parched_blue_marvel",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790692087699,
+      "tag": "0002_orange_richard_fisk",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1790695452627,
+      "tag": "0003_workable_red_ghost",
+      "breakpoints": true
     }
   ]
 }

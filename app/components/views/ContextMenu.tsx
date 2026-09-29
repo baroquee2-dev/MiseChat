@@ -49,6 +49,8 @@ export type ContextMenuButtonProps = {
     variant?: 'normal' | 'warning'
     disabled?: boolean
     status?: boolean
+    /** Makes the status dot its own target, so the row's label and its lamp do different things. */
+    onStatusPress?: (close: () => void) => void
 }
 
 export interface ContextMenuProps extends ViewProps {
@@ -376,16 +378,31 @@ const MenuList = ({
                                     }>
                                     {item.label}
                                 </Text>
-                                {item.status !== undefined && (
-                                    <View
-                                        style={[
-                                            styles.statusDot,
-                                            item.status
-                                                ? styles.statusDotActive
-                                                : styles.statusDotInactive,
-                                        ]}
-                                    />
-                                )}
+                                {item.status !== undefined &&
+                                    (item.onStatusPress ? (
+                                        <Pressable
+                                            hitSlop={12}
+                                            style={styles.statusHit}
+                                            onPress={() => item.onStatusPress?.(onClose)}>
+                                            <View
+                                                style={[
+                                                    styles.statusDot,
+                                                    item.status
+                                                        ? styles.statusDotActive
+                                                        : styles.statusDotInactive,
+                                                ]}
+                                            />
+                                        </Pressable>
+                                    ) : (
+                                        <View
+                                            style={[
+                                                styles.statusDot,
+                                                item.status
+                                                    ? styles.statusDotActive
+                                                    : styles.statusDotInactive,
+                                            ]}
+                                        />
+                                    ))}
                             </Pressable>
 
                             {hasSubmenu && openKey === key && (
@@ -433,6 +450,12 @@ const useStyles = () => {
             height: 10,
             borderRadius: 5,
             marginLeft: 'auto',
+        },
+        // Pads a 10px dot out to something a thumb can actually hit
+        statusHit: {
+            marginLeft: 'auto',
+            paddingLeft: 16,
+            paddingVertical: 4,
         },
         statusDotActive: {
             backgroundColor: color.quote,
