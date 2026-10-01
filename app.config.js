@@ -7,7 +7,7 @@ module.exports = {
         name: IS_DEV ? 'MiseChat (DEV)' : 'MiseChat',
         newArchEnabled: true,
         slug: 'MiseChat',
-        version: '0.1.0',
+        version: '0.3.0',
         orientation: 'default',
         icon: APP_ICON,
         scheme: 'misechat',
@@ -51,7 +51,6 @@ module.exports = {
                         './assets/characters/EnglishSample.png',
                         './assets/characters/JapaneseSample.png',
                         './assets/characters/ChineseSample.png',
-                        './assets/models/llama3tokenizer.gguf',
                         './assets/images/default-chat-background.png',
                     ],
                 },
@@ -65,7 +64,6 @@ module.exports = {
                         enableProguardInReleaseBuilds: true,
                         enableShrinkResourcesInReleaseBuilds: true,
                         useLegacyPackaging: true,
-                        extraProguardRules: '-keep class com.rnllama.** { *; }',
                     },
                 },
             ],
@@ -75,12 +73,6 @@ module.exports = {
                     backgroundColor: '#000000',
                     image: APP_ICON,
                     imageWidth: 200,
-                },
-            ],
-            [
-                'expo-notifications',
-                {
-                    icon: APP_ICON,
                 },
             ],
             './expo-build-plugins/gradlejvm.plugin.js',
@@ -106,13 +98,22 @@ module.exports = {
             ],
             'expo-localization',
             'expo-audio',
+            [
+                // Used only for in-app streaming TTS playback, so none of the
+                // background-audio machinery or the FFmpeg decoders are needed.
+                'react-native-audio-api',
+                {
+                    iosBackgroundMode: false,
+                    androidForegroundService: false,
+                    androidPermissions: [],
+                    disableFFmpeg: true,
+                },
+            ],
             'expo-router',
             'expo-font',
             'expo-image',
             './expo-build-plugins/bgactions.plugin.js',
             './expo-build-plugins/usercert.plugin.js',
-            './expo-build-plugins/rnllama.plugin.js',
-            './expo-build-plugins/copyhtp.plugin.js',
         ],
         experiments: {
             typedRoutes: true,

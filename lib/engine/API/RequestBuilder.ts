@@ -40,12 +40,8 @@ export const buildRequest = async ({
     switch (apiConfig.payload.type) {
         case 'openai':
             return openAIRequest(fields)
-        case 'ollama':
-            return ollamaRequest(fields)
         case 'cohere':
             return cohereRequest(apiConfig, fields)
-        case 'horde':
-            return hordeRequest(fields)
         case 'claude':
             return claudeRequest(apiConfig, instruct, fields)
         case 'custom':
@@ -62,34 +58,10 @@ const openAIRequest = async ({ payloadFields, model, stop, prompt }: Field) => {
     }
 }
 
-const ollamaRequest = async ({ payloadFields, model, stop, prompt }: Field) => {
-    let keep_alive = 5
-    if (payloadFields.keep_alive) {
-        keep_alive = payloadFields.keep_alive as number
-        delete payloadFields.keep_alive
-    }
-
-    return {
-        options: {
-            ...payloadFields,
-            ...stop,
-        },
-        keep_alive: keep_alive + 'm',
-        ...model,
-        ...prompt,
-        raw: true,
-        stream: true,
-    }
-}
-
 const cohereRequest = async (
     config: APIConfiguration,
     { payloadFields, model, stop, prompt }: Field
 ) => {
-    if (config.request.completionType.type === 'textCompletions') {
-        return
-    }
-
     const seedObject = config.request.samplerFields.filter(
         (item) => item.samplerID === SamplerID.SEED
     )
@@ -118,10 +90,7 @@ const claudeRequest = async (
     { payloadFields, model, stop, prompt }: Field
 ) => {
     const systemPrompt = instruct.system_prompt
-    const systemRole =
-        config.request.completionType.type === 'chatCompletions'
-            ? config.request.completionType.systemRole
-            : 'system'
+    const systemRole = config.request.completionType.systemRole
     const promptObject = prompt?.[config.request.promptKey]
     const finalPrompt = Array.isArray(promptObject)
         ? {
@@ -137,27 +106,6 @@ const claudeRequest = async (
         ...model,
         ...stop,
         ...finalPrompt,
-    }
-}
-
-const hordeRequest = async ({ payloadFields, model, stop, prompt }: Field) => {
-    return {
-        params: {
-            ...payloadFields,
-            n: 1,
-            frmtadsnsp: false,
-            frmtrmblln: false,
-            frmtrmspch: false,
-            frmttriminc: true,
-            ...stop,
-        },
-        ...prompt,
-        trusted_workers: false,
-        slow_workers: true,
-        workers: [],
-        worker_blacklist: false,
-        models: model.model,
-        dry_run: false,
     }
 }
 

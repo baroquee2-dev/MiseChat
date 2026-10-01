@@ -104,7 +104,7 @@ export namespace Theme {
             {
                 name: Storage.ColorState,
                 storage: createMMKVStorage(),
-                version: 2,
+                version: 1,
                 partialize: (state) => ({
                     color: state.color,
                     customColors: state.customColors,
@@ -112,14 +112,6 @@ export namespace Theme {
                     lightColor: state.lightColor,
                     useSystemDarkMode: state.useSystemDarkMode,
                 }),
-                migrate: (persistedState: any, version) => {
-                    if (version === 1) {
-                        persistedState.darkColor = DefaultColorSchemes.lavenderDark
-                        persistedState.lightColor = DefaultColorSchemes.lavenderLight
-                        persistedState.useSystemDarkMode = false
-                    }
-                    return persistedState
-                },
             }
         )
     )

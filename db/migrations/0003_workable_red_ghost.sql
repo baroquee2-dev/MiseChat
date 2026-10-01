@@ -1,0 +1,1 @@
+ALTER TABLE `chats` ADD `author_note_enabled` integer DEFAULT true NOT NULL;

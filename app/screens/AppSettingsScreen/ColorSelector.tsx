@@ -181,7 +181,8 @@ const ColorThemeItem: React.FC<ColorThemeItemProps> = ({ item, index, showDelete
                         }}
                         onPress={() => {
                             setDarkColor(item)
-                            if (systemTheme === 'light') setBackgroundColorAsync(item.neutral._100)
+                            // Only repaint now if the phone is actually in the mode being set
+                            if (systemTheme === 'dark') setBackgroundColorAsync(item.neutral._100)
                         }}>
                         <Octicons
                             color={
@@ -222,6 +223,7 @@ const ColorSelector = () => {
                 value={systemDark}
                 onChangeValue={setSystemDark}
                 label={t('themes.useSystemDark')}
+                description={t('themes.useSystemDarkDesc')}
             />
             <HeaderButton
                 headerRight={() => (

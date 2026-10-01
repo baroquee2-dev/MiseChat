@@ -8,6 +8,7 @@ import { useFocusedValue } from '@lib/hooks/useFocusedValue'
 import { Characters } from '@lib/state/Characters'
 import { useAvatarViewerStore } from '@lib/state/components/AvatarViewer'
 
+import LipSyncPortrait from '../LipSyncPortrait'
 import PortraitBreathing from '../PortraitBreathing'
 
 type ImmersiveFullscreenPortraitProps = {
@@ -32,11 +33,13 @@ const ImmersiveFullscreenPortrait: React.FC<ImmersiveFullscreenPortraitProps> = 
                         activeOpacity={0.95}
                         style={[styles.layer, styles.portraitZoom]}
                         onPress={() => setShowViewer(true, false)}>
-                        <Avatar
-                            contentFit="cover"
-                            style={styles.layer}
-                            targetImage={Characters.getImageDir(stableCharImageId)}
-                        />
+                        <LipSyncPortrait style={styles.layer}>
+                            <Avatar
+                                contentFit="cover"
+                                style={styles.layer}
+                                targetImage={Characters.getImageDir(stableCharImageId)}
+                            />
+                        </LipSyncPortrait>
                     </TouchableOpacity>
                 </PortraitBreathing>
             </Animated.View>

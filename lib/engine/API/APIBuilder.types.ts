@@ -44,8 +44,7 @@ export interface APIFeatures {
 }
 
 export interface APIRequestFormat {
-    // horde requires a special response format
-    requestType: 'stream' | 'horde'
+    requestType: 'stream'
     // refer to SamplerData.ts
     samplerFields: APISampler[]
     // whether or not a stop sequence is used
@@ -54,17 +53,15 @@ export interface APIRequestFormat {
     stopKey: string
     // key for the prompt, eg 'messages' , 'prompt', 'chat_history'
     promptKey: string
-    completionType:
-        | {
-              type: 'chatCompletions'
-              userRole: string
-              systemRole: string
-              assistantRole: string
-              contentName: string
-              supportsAudio?: boolean
-              supportsImages?: boolean
-          }
-        | { type: 'textCompletions' }
+    completionType: {
+        type: 'chatCompletions'
+        userRole: string
+        systemRole: string
+        assistantRole: string
+        contentName: string
+        supportsAudio?: boolean
+        supportsImages?: boolean
+    }
     // key for the authorization header
     authHeader: 'Authorization' | 'X-API-KEY' | string
     // added before the api key value
@@ -85,7 +82,7 @@ export interface APIRequestFormat {
 // cohere is defined, however its format now supports openai
 // custom formats allows you to define a string with macros instead
 export type APIPayloadFormat =
-    | { type: 'openai' | 'ollama' | 'cohere' | 'horde' | 'claude' }
+    | { type: 'openai' | 'cohere' | 'claude' }
     | { type: 'custom'; customPayload: string }
 
 export interface APIModelFormat {

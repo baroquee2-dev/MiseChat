@@ -145,6 +145,21 @@ const ChatEditPopup: React.FC<ChatEditPopupProps> = ({ item, children, onPress }
                             close()
                         },
                     },
+                    {
+                        label: t('authorNote.title'),
+                        icon: 'flag' as const,
+                        onPress: (close: () => void) => {
+                            setShow(Drawer.ID.CHATLIST, false)
+                            close()
+                            router.push({
+                                pathname: '/screens/ChatAuthorNoteScreen',
+                                params: {
+                                    chatId: String(item.id),
+                                    chatName: item.name,
+                                },
+                            })
+                        },
+                    },
                     ...(item.summary?.trim()
                         ? [
                               {

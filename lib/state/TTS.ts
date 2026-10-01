@@ -4,11 +4,24 @@ import * as Speech from 'expo-speech'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { useShallow } from 'zustand/react/shallow'
-import i18n from '@lib/i18n'
 
+import { PcmStreamPlayer } from '@lib/audio/PcmStreamPlayer'
+import {
+    createFirstAudioLogger,
+    fetchGeminiPcm,
+    isAbort,
+    streamCartesiaPcm,
+    streamElevenLabsPcm,
+    streamGeminiPcm,
+    supportsGeminiStreaming,
+} from '@lib/audio/SpeechStreams'
+import { getGeminiApiKey } from '@lib/engine/API/GeminiKey'
 import { Storage } from '@lib/enums/Storage'
+import i18n from '@lib/i18n'
+import { isLipSyncVoicing } from '@lib/state/LemonSlice'
 import { Logger } from '@lib/state/Logger'
 import { createMMKVStorage } from '@lib/storage/MMKV'
+import { extractSpeech, type SpeechMode } from '@lib/utils/SpeechText'
 
 import { Chats, useInference } from './Chat'
 
@@ -24,7 +37,6 @@ type TTSState = {
     elevenLabsApiKey: string
     elevenLabsVoiceId: string
     elevenLabsModel: string
-    geminiApiKey: string
     geminiVoiceName: string
     geminiModel: string
     cartesiaApiKey: string
@@ -41,7 +53,6 @@ type TTSState = {
     setElevenLabsApiKey: (apiKey: string) => void
     setElevenLabsVoiceId: (voiceId: string) => void
     setElevenLabsModel: (model: string) => void
-    setGeminiApiKey: (apiKey: string) => void
     setGeminiVoiceName: (voiceName: string) => void
     setGeminiModel: (model: string) => void
     setCartesiaApiKey: (apiKey: string) => void
@@ -49,6 +60,9 @@ type TTSState = {
     setCartesiaModel: (model: string) => void
     setCartesiaLanguage: (language: string) => void
     setLiveTTS: (b: boolean) => void
+    /** Which parts of a reply are read aloud. */
+    speechMode: SpeechMode
+    setSpeechMode: (mode: SpeechMode) => void
 
     speak: (text: string, onDone?: () => void, onStop?: () => void) => void
     handleEndGeneration: (lastIndex: number, text: string) => Promise<void>
@@ -92,10 +106,8 @@ export const useTTS = () => {
         setElevenLabsApiKey,
         setElevenLabsVoiceId,
         setElevenLabsModel,
-        geminiApiKey,
         geminiVoiceName,
         geminiModel,
-        setGeminiApiKey,
         setGeminiVoiceName,
         setGeminiModel,
         cartesiaApiKey,
@@ -108,6 +120,8 @@ export const useTTS = () => {
         setCartesiaLanguage,
         live,
         setLive,
+        speechMode,
+        setSpeechMode,
     } = useTTSStore(
         useShallow((state) => ({
             startTTS: state.startTTS,
@@ -129,10 +143,8 @@ export const useTTS = () => {
             setElevenLabsApiKey: state.setElevenLabsApiKey,
             setElevenLabsVoiceId: state.setElevenLabsVoiceId,
             setElevenLabsModel: state.setElevenLabsModel,
-            geminiApiKey: state.geminiApiKey,
             geminiVoiceName: state.geminiVoiceName,
             geminiModel: state.geminiModel,
-            setGeminiApiKey: state.setGeminiApiKey,
             setGeminiVoiceName: state.setGeminiVoiceName,
             setGeminiModel: state.setGeminiModel,
             cartesiaApiKey: state.cartesiaApiKey,
@@ -145,6 +157,8 @@ export const useTTS = () => {
             setCartesiaLanguage: state.setCartesiaLanguage,
             live: state.liveTTS,
             setLive: state.setLiveTTS,
+            speechMode: state.speechMode,
+            setSpeechMode: state.setSpeechMode,
         }))
     )
     return {
@@ -167,10 +181,8 @@ export const useTTS = () => {
         setElevenLabsApiKey,
         setElevenLabsVoiceId,
         setElevenLabsModel,
-        geminiApiKey,
         geminiVoiceName,
         geminiModel,
-        setGeminiApiKey,
         setGeminiVoiceName,
         setGeminiModel,
         cartesiaApiKey,
@@ -183,6 +195,8 @@ export const useTTS = () => {
         setCartesiaLanguage,
         live,
         setLive,
+        speechMode,
+        setSpeechMode,
     }
 }
 
@@ -214,17 +228,25 @@ export const useTTSStore = create<TTSState>()(
             // Rachel is an ElevenLabs premade voice. Users may replace this with any Voice ID.
             elevenLabsVoiceId: '21m00Tcm4TlvDq8ikWAM',
             elevenLabsModel: 'eleven_v3',
-            geminiApiKey: '',
             geminiVoiceName: 'Kore',
             geminiModel: 'gemini-3.1-flash-tts-preview',
             cartesiaApiKey: '',
             cartesiaVoiceId: 'db6b0ed5-d5d3-463d-ae85-518a07d3c2b4',
-            cartesiaModel: 'sonic-3.5',
+            cartesiaModel: 'sonic-3.6',
             cartesiaLanguage: 'zh',
             activeChatIndex: undefined,
+            speechMode: 'auto',
+            setSpeechMode: (mode) => set({ speechMode: mode }),
             startTTS: async (text: string, index: number) => {
                 const clearIndex = () => {
                     if (get().activeChatIndex === index) set({ activeChatIndex: undefined })
+                }
+
+                const spoken = extractSpeech(text, get().speechMode)
+                if (!spoken.trim()) {
+                    Logger.info('Nothing to speak in this message')
+                    clearIndex()
+                    return
                 }
 
                 const currentSpeaker = get().voice
@@ -240,7 +262,7 @@ export const useTTSStore = create<TTSState>()(
                     set({ activeChatIndex: index })
                     try {
                         await queueElevenLabsSpeech(
-                            text,
+                            spoken,
                             get().elevenLabsApiKey,
                             get().elevenLabsVoiceId,
                             get().elevenLabsModel,
@@ -254,7 +276,8 @@ export const useTTSStore = create<TTSState>()(
                     return
                 }
                 if (get().provider === 'gemini') {
-                    if (!get().geminiApiKey.trim()) {
+                    const geminiApiKey = getGeminiApiKey()
+                    if (!geminiApiKey) {
                         Logger.errorToast(i18n.t('toast.enterGeminiKey'))
                         clearIndex()
                         return
@@ -263,8 +286,8 @@ export const useTTSStore = create<TTSState>()(
                     set({ activeChatIndex: index })
                     try {
                         await queueGeminiSpeech(
-                            text,
-                            get().geminiApiKey,
+                            spoken,
+                            geminiApiKey,
                             get().geminiVoiceName,
                             get().geminiModel,
                             get().rate
@@ -286,7 +309,7 @@ export const useTTSStore = create<TTSState>()(
                     set({ activeChatIndex: index })
                     try {
                         await queueCartesiaSpeech(
-                            text,
+                            spoken,
                             get().cartesiaApiKey,
                             get().cartesiaVoiceId,
                             get().cartesiaModel,
@@ -308,14 +331,14 @@ export const useTTSStore = create<TTSState>()(
                 if (await Speech.isSpeakingAsync()) await Speech.stop()
                 const filter = /([。…！？、!?.,*"])/
                 const filteredchunks: string[] = []
-                const chunks = text.split(filter)
+                const chunks = spoken.split(filter)
                 chunks.forEach((item, index) => {
                     if (!filter.test(item) && item) return filteredchunks.push(item)
                     if (index > 0)
                         filteredchunks[filteredchunks.length - 1] =
                             filteredchunks[filteredchunks.length - 1] + item
                 })
-                if (filteredchunks.length === 0) filteredchunks.push(text)
+                if (filteredchunks.length === 0) filteredchunks.push(spoken)
 
                 const cleanedchunks = filteredchunks.map((item) =>
                     item.replaceAll(/[*"]/g, '').trim()
@@ -367,9 +390,6 @@ export const useTTSStore = create<TTSState>()(
             setElevenLabsModel: (elevenLabsModel) => {
                 set({ elevenLabsModel })
             },
-            setGeminiApiKey: (geminiApiKey) => {
-                set({ geminiApiKey })
-            },
             setGeminiVoiceName: (geminiVoiceName) => {
                 set({ geminiVoiceName })
             },
@@ -417,8 +437,9 @@ export const useTTSStore = create<TTSState>()(
                     return
                 }
                 if (get().provider === 'gemini') {
-                    const { geminiApiKey, geminiVoiceName, geminiModel, rate } = get()
-                    if (!geminiApiKey.trim()) {
+                    const { geminiVoiceName, geminiModel, rate } = get()
+                    const geminiApiKey = getGeminiApiKey()
+                    if (!geminiApiKey) {
                         Logger.errorToast(i18n.t('toast.enterGeminiKey'))
                         onStop()
                         return
@@ -466,6 +487,8 @@ export const useTTSStore = create<TTSState>()(
 
             handleEndGeneration: async (lastIndex, text) => {
                 if (!get().enabled) return
+                // The lip-sync avatar voices the reply itself; playing TTS too would double it.
+                if (isLipSyncVoicing()) return
                 if (get().liveTTS) {
                     get().clearAndRunBuffer(lastIndex)
                 } else if (get().auto) {
@@ -492,7 +515,7 @@ export const useTTSStore = create<TTSState>()(
                 const buffer = get().buffer
 
                 if (!get().pauseLive && buffer.trim()) {
-                    const clean = cleanMarkdown(buffer)
+                    const clean = cleanMarkdown(extractSpeech(buffer, get().speechMode))
                     if (clean) {
                         set({ activeChatIndex: lastIndex })
                         get().speak(clean, () => set({ activeChatIndex: undefined }))
@@ -506,7 +529,8 @@ export const useTTSStore = create<TTSState>()(
                 set({ buffer: '' })
             },
             insertBuffer: (text: string) => {
-                if (!get().enabled || !get().liveTTS || get().pauseLive) return
+                if (!get().enabled || !get().liveTTS || get().pauseLive || isLipSyncVoicing())
+                    return
                 const newBuffer = get().buffer + text
 
                 let lastMatchIndex = -1
@@ -518,7 +542,7 @@ export const useTTSStore = create<TTSState>()(
                 if (lastMatchIndex !== -1) {
                     const fullSentence = newBuffer.slice(0, lastMatchIndex).trim()
                     const remainder = newBuffer.slice(lastMatchIndex)
-                    const clean = cleanMarkdown(fullSentence)
+                    const clean = cleanMarkdown(extractSpeech(fullSentence, get().speechMode))
                     if (clean) {
                         get().speak(clean)
                     }
@@ -531,18 +555,18 @@ export const useTTSStore = create<TTSState>()(
         {
             name: Storage.TTS,
             storage: createMMKVStorage(),
-            version: 4,
+            version: 1,
             partialize: (state) => ({
                 enabled: state.enabled,
                 auto: state.auto,
                 voice: state.voice,
                 rate: state.rate,
                 liveTTS: state.liveTTS,
+                speechMode: state.speechMode,
                 provider: state.provider,
                 elevenLabsApiKey: state.elevenLabsApiKey,
                 elevenLabsVoiceId: state.elevenLabsVoiceId,
                 elevenLabsModel: state.elevenLabsModel,
-                geminiApiKey: state.geminiApiKey,
                 geminiVoiceName: state.geminiVoiceName,
                 geminiModel: state.geminiModel,
                 cartesiaApiKey: state.cartesiaApiKey,
@@ -588,7 +612,7 @@ const queueElevenLabsSpeech = (
     return elevenLabsQueue
 }
 
-const playElevenLabsSpeech = async (
+const playElevenLabsFile = async (
     text: string,
     apiKey: string,
     voiceId: string,
@@ -638,6 +662,51 @@ const playElevenLabsSpeech = async (
     })
 }
 
+/** Raw PCM can be played while the response is still arriving; mp3 has to be complete first. */
+const STREAM_SAMPLE_RATE = 24000
+
+const playElevenLabsSpeech = async (
+    text: string,
+    apiKey: string,
+    voiceId: string,
+    model: string,
+    rate: number
+): Promise<void> => {
+    const onAudio = createFirstAudioLogger('ElevenLabs')
+    const controller = new AbortController()
+    elevenLabsAbortController = controller
+    const player = new PcmStreamPlayer(STREAM_SAMPLE_RATE, Math.min(rate, 2))
+    const finish = () => player.stop()
+    finishElevenLabsPlayback = finish
+    try {
+        const outcome = await streamElevenLabsPcm({
+            text: text,
+            apiKey: apiKey,
+            voiceId: voiceId,
+            model: model,
+            sampleRate: STREAM_SAMPLE_RATE,
+            signal: controller.signal,
+            onPcm: (pcm) => {
+                onAudio()
+                player.push(pcm)
+            },
+        })
+        if (outcome === 'unavailable') {
+            player.stop()
+            if (finishElevenLabsPlayback === finish) finishElevenLabsPlayback = undefined
+            // PCM output can be gated by subscription tier; mp3 file playback still works there.
+            Logger.warn('ElevenLabs streaming unavailable, using file playback')
+            return playElevenLabsFile(text, apiKey, voiceId, model, rate)
+        }
+        player.end()
+    } catch (error) {
+        player.stop()
+        if (!isAbort(error)) throw error
+    }
+    await player.done
+    if (finishElevenLabsPlayback === finish) finishElevenLabsPlayback = undefined
+}
+
 const getElevenLabsError = (error: unknown) => {
     if (error instanceof Error && error.name === 'AbortError') return 'ElevenLabs speech stopped'
     if (error instanceof Error) return `ElevenLabs: ${error.message}`
@@ -685,43 +754,55 @@ const playGeminiSpeech = async (
     model: string,
     rate: number
 ): Promise<void> => {
+    if (!supportsGeminiStreaming(model)) return playGeminiFile(text, apiKey, voiceName, model, rate)
+
+    const onAudio = createFirstAudioLogger('Gemini')
     const controller = new AbortController()
     geminiAbortController = controller
-    const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-        {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-goog-api-key': apiKey,
-            },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text }] }],
-                generationConfig: {
-                    responseModalities: ['AUDIO'],
-                    speechConfig: {
-                        voiceConfig: {
-                            prebuiltVoiceConfig: { voiceName },
-                        },
-                    },
-                },
-            }),
-            signal: controller.signal,
-        }
-    )
-    if (!response.ok) {
-        const detail = await response.text()
-        throw new Error(detail || `Gemini TTS request failed (${response.status})`)
-    }
+    const player = new PcmStreamPlayer(STREAM_SAMPLE_RATE, Math.min(rate, 2))
+    const finish = () => player.stop()
+    finishGeminiPlayback = finish
 
-    const result = (await response.json()) as {
-        candidates?: { content?: { parts?: { inlineData?: { data?: string } }[] } }[]
+    try {
+        await streamGeminiPcm({
+            text: text,
+            apiKey: apiKey,
+            voiceName: voiceName,
+            model: model,
+            signal: controller.signal,
+            onPcm: (pcm) => {
+                onAudio()
+                player.push(pcm)
+            },
+        })
+        player.end()
+    } catch (error) {
+        player.stop()
+        if (!isAbort(error)) throw error
     }
-    const base64Audio = result.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data
-    if (!base64Audio) throw new Error('Gemini TTS returned no audio data')
+    await player.done
+    if (finishGeminiPlayback === finish) finishGeminiPlayback = undefined
+}
+
+const playGeminiFile = async (
+    text: string,
+    apiKey: string,
+    voiceName: string,
+    model: string,
+    rate: number
+): Promise<void> => {
+    const controller = new AbortController()
+    geminiAbortController = controller
+    const pcm = await fetchGeminiPcm({
+        text: text,
+        apiKey: apiKey,
+        voiceName: voiceName,
+        model: model,
+        signal: controller.signal,
+    })
 
     const audioFile = new File(Paths.cache, `gemini-tts-${Date.now()}.wav`)
-    audioFile.write(pcmToWav(base64ToBytes(base64Audio)))
+    audioFile.write(pcmToWav(pcm))
     await setAudioModeAsync({ playsInSilentMode: true })
 
     await new Promise<void>((resolve) => {
@@ -790,7 +871,7 @@ const queueCartesiaSpeech = (
 
 const getCartesiaSpeechSpeed = (rate: number) => Math.min(1.5, Math.max(0.6, rate))
 
-const playCartesiaSpeech = async (
+const playCartesiaFile = async (
     text: string,
     apiKey: string,
     voiceId: string,
@@ -857,17 +938,57 @@ const playCartesiaSpeech = async (
     })
 }
 
+const playCartesiaSpeech = async (
+    text: string,
+    apiKey: string,
+    voiceId: string,
+    model: string,
+    language: string,
+    rate: number
+): Promise<void> => {
+    const speechSpeed = getCartesiaSpeechSpeed(rate)
+    // Beyond Cartesia's own speed range the remainder is applied at playback, as before.
+    const playbackBoost = rate > speechSpeed ? Math.min(rate / speechSpeed, 2) : 1
+    const onAudio = createFirstAudioLogger('Cartesia')
+    const controller = new AbortController()
+    cartesiaAbortController = controller
+    const player = new PcmStreamPlayer(STREAM_SAMPLE_RATE, playbackBoost)
+    const finish = () => player.stop()
+    finishCartesiaPlayback = finish
+    try {
+        const outcome = await streamCartesiaPcm({
+            text: text,
+            apiKey: apiKey,
+            voiceId: voiceId,
+            model: model,
+            language: language,
+            speed: speechSpeed,
+            sampleRate: STREAM_SAMPLE_RATE,
+            signal: controller.signal,
+            onPcm: (pcm) => {
+                onAudio()
+                player.push(pcm)
+            },
+        })
+        if (outcome === 'unavailable') {
+            player.stop()
+            if (finishCartesiaPlayback === finish) finishCartesiaPlayback = undefined
+            Logger.warn('Cartesia streaming unavailable, using file playback')
+            return playCartesiaFile(text, apiKey, voiceId, model, language, rate)
+        }
+        player.end()
+    } catch (error) {
+        player.stop()
+        if (!isAbort(error)) throw error
+    }
+    await player.done
+    if (finishCartesiaPlayback === finish) finishCartesiaPlayback = undefined
+}
+
 const getCartesiaError = (error: unknown) => {
     if (error instanceof Error && error.name === 'AbortError') return 'Cartesia speech stopped'
     if (error instanceof Error) return `Cartesia: ${error.message}`
     return 'Cartesia speech failed'
-}
-
-const base64ToBytes = (base64: string): Uint8Array => {
-    const binary = atob(base64)
-    const bytes = new Uint8Array(binary.length)
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-    return bytes
 }
 
 const pcmToWav = (pcmData: Uint8Array, sampleRate = 24000, channels = 1, bitsPerSample = 16) => {

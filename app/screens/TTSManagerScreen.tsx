@@ -1,7 +1,7 @@
 import * as Speech from 'expo-speech'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { View } from 'react-native'
+import { Text, View } from 'react-native'
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
 
 import ThemedButton from '@components/buttons/ThemedButton'
@@ -11,11 +11,13 @@ import ThemedSwitch from '@components/input/ThemedSwitch'
 import ThemedTextInput from '@components/input/ThemedTextInput'
 import SectionTitle from '@components/text/SectionTitle'
 import HeaderTitle from '@components/views/HeaderTitle'
+import { useGeminiApiKey } from '@lib/engine/API/GeminiKey'
 import i18n from '@lib/i18n'
 import { Logger } from '@lib/state/Logger'
 import { useTTS, type TTSProvider } from '@lib/state/TTS'
 import { Theme } from '@lib/theme/ThemeManager'
 import { groupBy } from '@lib/utils/Array'
+import { SPEECH_MODES, type SpeechMode } from '@lib/utils/SpeechText'
 
 type LanguageListItem = {
     [key: string]: Speech.Voice[]
@@ -109,13 +111,11 @@ type CartesiaModel = {
 }
 
 const cartesiaModels: CartesiaModel[] = [
-    {
-        model_id: 'sonic-3.5',
-        name: 'Sonic 3.5',
-        descKey: 'latest',
-    },
+    { model_id: 'sonic-3.6', name: 'Sonic 3.6', descKey: 'latest' },
+    { model_id: 'sonic-3.5', name: 'Sonic 3.5', descKey: 'stable' },
     { model_id: 'sonic-3', name: 'Sonic 3', descKey: 'stable' },
-    { model_id: 'sonic-latest', name: 'Sonic Latest', descKey: 'preview' },
+    // Cartesia deprecated `sonic-latest` in favour of `sonic-preview`.
+    { model_id: 'sonic-preview', name: 'Sonic Preview', descKey: 'preview' },
 ]
 
 const cartesiaLanguageCodes = ['zh', 'en', 'ja', 'ko', 'fr', 'de', 'es', 'pt'] as const
@@ -131,7 +131,7 @@ const fallbackCartesiaVoices: CartesiaVoice[] = [
 
 const TTSManagerScreen = () => {
     const { t } = useTranslation()
-    const { color } = Theme.useTheme()
+    const { color, spacing, fontSize, borderRadius } = Theme.useTheme()
     const {
         voice,
         setVoice,
@@ -151,8 +151,6 @@ const TTSManagerScreen = () => {
         setElevenLabsVoiceId,
         elevenLabsModel,
         setElevenLabsModel,
-        geminiApiKey,
-        setGeminiApiKey,
         geminiVoiceName,
         setGeminiVoiceName,
         geminiModel,
@@ -167,7 +165,10 @@ const TTSManagerScreen = () => {
         setCartesiaLanguage,
         startTTS,
         stopTTS,
+        speechMode,
+        setSpeechMode,
     } = useTTS()
+    const geminiApiKey = useGeminiApiKey()
     const [lang, setLang] = useState(voice?.language ?? 'en-US')
     const [modelList, setModelList] = useState<Speech.Voice[]>([])
     const languageList: LanguageListItem = groupBy(modelList, 'language')
@@ -372,6 +373,19 @@ const TTSManagerScreen = () => {
                 onValueChange={setRate}
             />
 
+            <SectionTitle style={{ marginTop: 8 }}>{t('tts.speechMode.title')}</SectionTitle>
+            <DropdownSheet
+                selected={speechMode}
+                data={SPEECH_MODES}
+                labelExtractor={(item) => t(`tts.speechMode.${item}`)}
+                onChangeValue={(item: SpeechMode) => setSpeechMode(item)}
+                modalTitle={t('tts.speechMode.title')}
+                closeOnSelect
+            />
+            <Text style={{ color: color.text._400, paddingBottom: 4 }}>
+                {t(`tts.speechMode.${speechMode}Desc`)}
+            </Text>
+
             <SectionTitle style={{ marginTop: 8 }}>{t('tts.speechProvider')}</SectionTitle>
             <DropdownSheet
                 selected={provider}
@@ -452,15 +466,26 @@ const TTSManagerScreen = () => {
 
             {provider === 'gemini' && (
                 <>
-                    <ThemedTextInput
-                        label={t('tts.geminiApiKey')}
-                        value={geminiApiKey}
-                        onChangeText={setGeminiApiKey}
-                        secureTextEntry
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        placeholder="AIza..."
-                    />
+                    <View
+                        style={{
+                            borderRadius: borderRadius.m,
+                            borderLeftWidth: 3,
+                            borderLeftColor: geminiApiKey ? color.text._400 : color.error._400,
+                            backgroundColor: color.neutral._200,
+                            padding: spacing.m,
+                            rowGap: spacing.xs,
+                        }}>
+                        <Text style={{ color: color.text._200, fontSize: fontSize.s }}>
+                            {t('tts.geminiKeyFromApi')}
+                        </Text>
+                        <Text
+                            style={{
+                                color: geminiApiKey ? color.text._400 : color.error._400,
+                                fontSize: fontSize.s,
+                            }}>
+                            {geminiApiKey ? t('tts.geminiKeyFound') : t('tts.geminiKeyMissing')}
+                        </Text>
+                    </View>
                     <SectionTitle>{t('tts.geminiVoice')}</SectionTitle>
                     <DropdownSheet
                         search

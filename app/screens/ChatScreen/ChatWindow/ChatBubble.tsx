@@ -1,10 +1,6 @@
 import { Pressable, Text, View } from 'react-native'
-import { useMMKVBoolean } from 'react-native-mmkv'
-import { useTranslation } from 'react-i18next'
 import { useShallow } from 'zustand/react/shallow'
 
-import { AppSettings } from '@lib/constants/GlobalValues'
-import { useAppMode } from '@lib/state/AppMode'
 import { Chats } from '@lib/state/Chat'
 import { Theme } from '@lib/theme/ThemeManager'
 
@@ -35,12 +31,9 @@ const ChatBubble: React.FC<ChatTextProps> = ({
     historyCompact = false,
     toolbarExternal = false,
 }) => {
-    const { t } = useTranslation()
     const message = Chats.useEntryData(index)
-    const { appMode } = useAppMode()
     const isVisualNovel = useIsVisualNovelPresentation()
     const isImmersive = useIsImmersivePresentation()
-    const [showTPS] = useMMKVBoolean(AppSettings.ShowTokenPerSecond)
     const { color, spacing, borderRadius, fontSize } = Theme.useTheme()
 
     const { setShowOptions } = useChatActionsState(
@@ -59,7 +52,6 @@ const ChatBubble: React.FC<ChatTextProps> = ({
         !message.is_user &&
         isLastMessage &&
         (isVisualNovel || isImmersive || hasSwipes || !isGreeting)
-    const timings = message.swipes[message.swipe_id].timings
 
     const isVisualNovelDialogue = isVisualNovel && isLastMessage && !message.is_user
     const isImmersiveDialogue = isImmersive && isLastMessage && !message.is_user
@@ -152,25 +144,6 @@ const ChatBubble: React.FC<ChatTextProps> = ({
                     style={{
                         flexDirection: 'row',
                     }}>
-                    {showTPS && appMode === 'local' && timings && !isVisualNovel && !isImmersive && (
-                        <Text
-                            style={{
-                                color: color.text._500,
-                                fontWeight: '300',
-                                textAlign: 'right',
-                                fontSize: fontSize.s,
-                            }}>
-                            {t('chat.promptTiming', {
-                                tps: getFiniteValue(timings.prompt_per_second),
-                                seconds: getFiniteValue(timings.prompt_ms / 1000),
-                            })}
-                            {t('chat.textGenTiming', {
-                                tps: getFiniteValue(timings.predicted_per_second),
-                                seconds: getFiniteValue(timings.predicted_ms / 1000),
-                            })}
-                        </Text>
-                    )}
-
                     <ChatQuickActions
                         nowGenerating={nowGenerating}
                         isLastMessage={isLastMessage}
@@ -271,11 +244,6 @@ const ChatBubble: React.FC<ChatTextProps> = ({
             )}
         </View>
     )
-}
-
-const getFiniteValue = (value: number | null) => {
-    if (!value || !isFinite(value)) return (0).toFixed(2)
-    return value.toFixed(2)
 }
 
 export default ChatBubble

@@ -1,6 +1,5 @@
 import { and, count, desc, eq, getTableColumns, inArray, like, sql } from 'drizzle-orm'
 import { randomUUID } from 'expo-crypto'
-import * as Notifications from 'expo-notifications'
 import mime from 'mime/lite'
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
@@ -25,12 +24,11 @@ import {
     ChatSwipe,
     chatSwipes,
     ChatType,
-    CompletionTimings,
 } from 'db/schema'
 
 import { Characters } from './Characters'
 import { Logger } from './Logger'
-import { AppSettings, APP_NAME } from '../constants/GlobalValues'
+import { AppSettings } from '../constants/GlobalValues'
 import { mmkv } from '../storage/MMKV'
 
 export interface ChatSwipeState extends ChatSwipe {
@@ -104,14 +102,14 @@ export interface ChatState {
             updateFinished?: boolean
             updateStarted?: boolean
             verifySwipeId?: number
-            timings?: CompletionTimings
-            resetTimings?: boolean
         }
     ) => Promise<void>
     deleteEntry: (index: number) => Promise<void>
     renameChat: (chatId: number, name: string) => void
     setAutoSummary: (enabled: boolean) => Promise<void>
     setChatSummary: (chatId: number, summary: string) => Promise<void>
+    /** Author's note for this chat, injected near the end of its context. */
+    setAuthorNote: (chatId: number, note: string, enabled?: boolean) => Promise<void>
     refreshKeyFacts: (chatId: number) => Promise<void>
     // swipe data
     swipe: (index: number, direction: number) => Promise<boolean>
@@ -155,40 +153,10 @@ type InferenceStateType = {
 
 type OutputBuffer = {
     data: string
-    timings?: CompletionTimings
     error?: string
 }
 
 type ChatSwipeUpdated = Pick<ChatSwipe, 'swipe' | 'id'> & Partial<Omit<ChatSwipe, 'swipe' | 'id'>>
-// TODO: Functionalize and move elsewhere
-export const sendGenerateCompleteNotification = async () => {
-    const showMessage = mmkv.getBoolean(AppSettings.ShowNotificationText)
-
-    const notificationTitle = showMessage
-        ? (Characters.useCharacterStore.getState().card?.name ?? '')
-        : 'Response Complete'
-
-    const notificationText = showMessage
-        ? Chats.useChatState.getState().buffer?.data?.trim()
-        : `${APP_NAME} has finished a response.`
-
-    Notifications.scheduleNotificationAsync({
-        content: {
-            title: notificationTitle,
-            body: notificationText,
-            sound: mmkv.getBoolean(AppSettings.PlayNotificationSound),
-            vibrate: mmkv.getBoolean(AppSettings.VibrateNotification) ? [250, 125, 250] : undefined,
-            badge: 0,
-            data: {
-                chatId: Chats.useChatState.getState().data?.id,
-                characterId: Characters.useCharacterStore.getState().id,
-            },
-        },
-        trigger: null,
-    })
-    Notifications.setBadgeCountAsync(0)
-}
-
 export const useInference = create<InferenceStateType>((set, get) => ({
     abortFunction: async () => {
         set({ generationAborted: true })
@@ -207,7 +175,6 @@ export const useInference = create<InferenceStateType>((set, get) => ({
         }),
     stopGenerating: () => {
         set({ nowGenerating: false, currentSwipeId: undefined })
-        if (mmkv.getBoolean(AppSettings.NotifyOnComplete)) sendGenerateCompleteNotification()
     },
     markGenerationFailed: () => set({ generationFailed: true }),
     setAbort: (fn) => {
@@ -454,7 +421,7 @@ export namespace Chats {
         },
 
         updateEntry: async (index: number, message: string, options = {}) => {
-            const { verifySwipeId, updateFinished, updateStarted, timings, resetTimings } = options
+            const { verifySwipeId, updateFinished, updateStarted } = options
             const messages = get()?.data?.messages
             if (!messages) return
 
@@ -479,8 +446,6 @@ export namespace Chats {
             }
             if (updateFinished) updatedSwipe.gen_finished = date
             if (updateStarted) updatedSwipe.gen_started = date
-            if (timings) updatedSwipe.timings = timings
-            if (resetTimings) updatedSwipe.timings = null
 
             await db.mutate.updateChatSwipe(updatedSwipe)
 
@@ -491,8 +456,6 @@ export namespace Chats {
             entry.token_count = undefined
             if (updateFinished) entry.gen_finished = date
             if (updateStarted) entry.gen_started = date
-            if (timings) entry.timings = timings
-            if (resetTimings) entry.timings = null
             messages[index].swipes[messages[index].swipe_id] = entry
 
             set((state) => ({
@@ -596,7 +559,6 @@ export namespace Chats {
                 Logger.error('Attempted to insert to buffer, but no valid entry was found!')
                 return
             }
-            if (buffer.timings) updatedSwipe.timings = buffer.timings
             if (!index) {
                 // this means there is no chat loaded, we need to update the db anyways
                 await db.mutate.updateChatSwipe(updatedSwipe)
@@ -604,7 +566,6 @@ export namespace Chats {
                 await get().updateEntry(index - 1, get().buffer.data, {
                     updateFinished: true,
                     verifySwipeId: cachedSwipeId,
-                    timings: buffer.timings,
                 })
         },
         insertLastToBuffer: () => {
@@ -680,6 +641,16 @@ export namespace Chats {
                         summary: trimmed,
                         summary_updated_at: updatedAt,
                     },
+                }
+            })
+        },
+        setAuthorNote: async (chatId: number, note: string, enabled = true) => {
+            const trimmed = note.trim()
+            await db.mutate.updateAuthorNote(chatId, trimmed, enabled)
+            set((state) => {
+                if (!state.data || state.data.id !== chatId) return state
+                return {
+                    data: { ...state.data, author_note: trimmed, author_note_enabled: enabled },
                 }
             })
         },
@@ -1047,6 +1018,17 @@ export namespace Chats {
                     .where(eq(chats.id, chatId))
             }
 
+            export const updateAuthorNote = async (
+                chatId: number,
+                note: string,
+                enabled: boolean
+            ) => {
+                await database
+                    .update(chats)
+                    .set({ author_note: note, author_note_enabled: enabled })
+                    .where(eq(chats.id, chatId))
+            }
+
             export const updateChatSummary = async (
                 chatId: number,
                 summary: string,
@@ -1332,7 +1314,6 @@ export namespace Chats {
                 send_date: new Date(),
                 gen_started: new Date(),
                 gen_finished: new Date(),
-                timings: null,
             },
         ],
         attachments: [],

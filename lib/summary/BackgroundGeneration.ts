@@ -5,7 +5,6 @@ import type { APIConfiguration, APIValues } from '@lib/engine/API/APIBuilder.typ
 import { APIManager } from '@lib/engine/API/APIManagerState'
 import type { Message } from '@lib/engine/API/ContextBuilder'
 import { buildRequest } from '@lib/engine/API/RequestBuilder'
-import { useAppModeStore } from '@lib/state/AppMode'
 import { Instructs } from '@lib/state/Instructs'
 import { Logger } from '@lib/state/Logger'
 import { SamplersManager } from '@lib/state/SamplerState'
@@ -15,6 +14,8 @@ export type BackgroundPrompt = {
     system: string
     user: string
     maxTokens: number
+    /** Defaults low, since most background jobs extract rather than write. */
+    temperature?: number
     /** Shown in warning logs so a failure points at the feature that caused it. */
     label: string
 }
@@ -28,10 +29,8 @@ const getRemoteFields = () => {
     return { values, config, instruct }
 }
 
-const buildPrompt = (config: APIConfiguration, prompt: BackgroundPrompt): string | Message[] => {
+const buildPrompt = (config: APIConfiguration, prompt: BackgroundPrompt): Message[] => {
     const completionType = config.request.completionType
-    if (completionType.type === 'textCompletions')
-        return `${prompt.system}\n\n${prompt.user}`.trim()
 
     return [
         { role: completionType.systemRole, [completionType.contentName]: prompt.system },
@@ -94,12 +93,6 @@ const generateRemote = async (prompt: BackgroundPrompt) => {
         return
     }
     const { config, values, instruct } = fields
-    if (config.request.requestType === 'horde') {
-        Logger.warn(
-            `Skipping ${prompt.label} because ${config.name} (Horde) is not supported for background generation`
-        )
-        return
-    }
 
     const backgroundConfig: APIConfiguration = {
         ...config,
@@ -108,7 +101,7 @@ const generateRemote = async (prompt: BackgroundPrompt) => {
     const samplers = {
         ...SamplersManager.getCurrentSampler(),
         [SamplerID.GENERATED_LENGTH]: prompt.maxTokens,
-        [SamplerID.TEMPERATURE]: 0.2,
+        [SamplerID.TEMPERATURE]: prompt.temperature ?? 0.2,
         // Reasoning models otherwise inherit whatever effort the user's active
         // sampler preset has, which can silently consume the entire
         // generated-length budget on hidden reasoning and leave nothing for
@@ -181,13 +174,6 @@ const generateRemote = async (prompt: BackgroundPrompt) => {
  */
 export const runBackgroundCompletion = async (prompt: BackgroundPrompt) => {
     try {
-        if (useAppModeStore.getState().appMode === 'local') {
-            const { generateLocalSummary } = await import('@lib/engine/LocalInference')
-            return await generateLocalSummary(
-                { system: prompt.system, user: prompt.user },
-                prompt.maxTokens
-            )
-        }
         return await generateRemote(prompt)
     } catch (error) {
         Logger.warn(`Failed to run ${prompt.label}: ${error}`)

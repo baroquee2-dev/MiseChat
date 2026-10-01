@@ -6,7 +6,6 @@ import { AppSettings } from '@lib/constants/GlobalValues'
 import { Theme } from '@lib/theme/ThemeManager'
 import appConfig from 'app.config'
 
-import AppModeToggle from './AppModeToggle'
 import RouteList from './RouteList'
 import UserInfo from './UserInfo'
 
@@ -22,7 +21,6 @@ const SettingsDrawer = () => {
                 paddingBottom: spacing.xl,
             }}>
             <UserInfo />
-            <AppModeToggle />
             <RouteList />
             <Text
                 style={{

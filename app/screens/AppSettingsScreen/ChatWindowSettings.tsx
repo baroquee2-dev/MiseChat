@@ -15,10 +15,6 @@ const ChatWindowSettings = () => {
     const [saveScroll, setSaveScroll] = useMMKVBoolean(AppSettings.SaveScrollPosition)
     const { capabilities } = useChatLayout()
 
-    const [showTokensPerSecond, setShowTokensPerSecond] = useMMKVBoolean(
-        AppSettings.ShowTokenPerSecond
-    )
-
     return (
         <View style={{ rowGap: 8 }}>
             <SectionTitle>{t('settings.chatWindow.title')}</SectionTitle>
@@ -35,13 +31,6 @@ const ChatWindowSettings = () => {
                 value={sendOnEnter}
                 onChangeValue={setSendOnEnter}
                 description={t('settings.chatWindow.sendOnEnterDesc')}
-            />
-
-            <ThemedSwitch
-                label={t('settings.chatWindow.showTps')}
-                value={showTokensPerSecond}
-                onChangeValue={setShowTokensPerSecond}
-                description={t('settings.chatWindow.showTpsDesc')}
             />
 
             {capabilities.supportsScrollPersistence && (

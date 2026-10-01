@@ -29,10 +29,15 @@ const ChatDrawerItem: React.FC<ChatDrawerItemProps> = ({ item, onLoad, index, ke
     const { chatId } = Chats.useChat()
     const setShow = Drawer.useDrawerStore((state) => state.setShow)
     const hasSummary = !!item.summary?.trim()
+    // Written but switched off is as good as absent, so the badge stays hidden
+    const hasAuthorNote = !!item.author_note?.trim() && !!item.author_note_enabled
     const isActive = item.id === chatId
 
     const openEditor = (
-        pathname: '/screens/ChatSummaryEditorScreen' | '/screens/ChatKeyFactsEditorScreen'
+        pathname:
+            | '/screens/ChatSummaryEditorScreen'
+            | '/screens/ChatKeyFactsEditorScreen'
+            | '/screens/ChatAuthorNoteScreen'
     ) => {
         setShow(Drawer.ID.CHATLIST, false)
         router.push({
@@ -75,6 +80,23 @@ const ChatDrawerItem: React.FC<ChatDrawerItemProps> = ({ item, onLoad, index, ke
                         </View>
                         <View style={styles.summaryActionLabel}>
                             <Text style={styles.summaryActionText}>{t('chat.editSummary')}</Text>
+                            <AntDesign name="edit" size={14} color={color.primary._400} />
+                        </View>
+                    </TouchableOpacity>
+                )}
+
+                {hasAuthorNote && (
+                    <TouchableOpacity
+                        style={styles.summaryAction}
+                        onPress={() => openEditor('/screens/ChatAuthorNoteScreen')}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('authorNote.title')}>
+                        <View style={styles.summaryBadge}>
+                            <AntDesign name="flag" size={14} color={color.primary._200} />
+                            <Text style={styles.summaryBadgeText}>{t('authorNote.active')}</Text>
+                        </View>
+                        <View style={styles.summaryActionLabel}>
+                            <Text style={styles.summaryActionText}>{t('common.edit')}</Text>
                             <AntDesign name="edit" size={14} color={color.primary._400} />
                         </View>
                     </TouchableOpacity>

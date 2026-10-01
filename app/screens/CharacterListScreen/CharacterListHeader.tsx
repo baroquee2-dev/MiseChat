@@ -1,4 +1,4 @@
-import { count, eq, notInArray } from 'drizzle-orm'
+import { count, eq } from 'drizzle-orm'
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite'
 import { useFocusEffect } from 'expo-router'
 import { useCallback } from 'react'
@@ -13,10 +13,7 @@ import StringArrayEditor from '@components/input/StringArrayEditor'
 import ThemedTextInput from '@components/input/ThemedTextInput'
 import { db } from '@db'
 import { AppSettings } from '@lib/constants/GlobalValues'
-import i18n from '@lib/i18n'
 import { CharacterSorter } from '@lib/state/CharacterSorter'
-import { Logger } from '@lib/state/Logger'
-import { TagHider } from '@lib/state/TagHider'
 import { Theme } from '@lib/theme/ThemeManager'
 import { characterTags, tags } from 'db/schema'
 
@@ -28,7 +25,6 @@ type CharacterListHeaderProps = {
 
 const CharacterListHeader: React.FC<CharacterListHeaderProps> = ({ resultLength }) => {
     const { t } = useTranslation()
-    const [useTagHider, setUseTagHider] = useMMKVBoolean(AppSettings.UseTagHider)
     const { showSearch, setShowSearch, textFilter, setTextFilter, tagFilter, setTagFilter } =
         CharacterSorter.useSorterStore(
             useShallow((state) => ({
@@ -43,7 +39,6 @@ const CharacterListHeader: React.FC<CharacterListHeaderProps> = ({ resultLength 
 
     const { color } = Theme.useTheme()
     const [showTags, setShowTags] = useMMKVBoolean(AppSettings.ShowTags)
-    const hiddenTags = TagHider.useHiddenTags()
 
     const { data } = useLiveQuery(
         db
@@ -53,9 +48,8 @@ const CharacterListHeader: React.FC<CharacterListHeaderProps> = ({ resultLength 
             })
             .from(tags)
             .leftJoin(characterTags, eq(characterTags.tag_id, tags.id))
-            .groupBy(tags.tag)
-            .where(notInArray(tags.tag, hiddenTags)),
-        [hiddenTags]
+            .groupBy(tags.tag),
+        []
     )
 
     useFocusEffect(
@@ -123,15 +117,6 @@ const CharacterListHeader: React.FC<CharacterListHeaderProps> = ({ resultLength 
                             setShowSearch(!showSearch)
                         }}
                         iconSize={24}
-                        delayLongPress={5000}
-                        onLongPress={() => {
-                            setUseTagHider(!useTagHider)
-                            Logger.infoToast(
-                                !useTagHider
-                                    ? i18n.t('characterList.hiderEnabled')
-                                    : i18n.t('characterList.hiderDisabled')
-                            )
-                        }}
                     />
                 </View>
             </View>

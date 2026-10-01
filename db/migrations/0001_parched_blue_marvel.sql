@@ -1,0 +1,1 @@
+ALTER TABLE `instructs` DROP COLUMN `use_common_stop`;

@@ -1,5 +1,5 @@
 import { extractPngTextChunk, replacePngTextChunk } from '@vali98/react-native-png-utils'
-import { and, asc, desc, eq, gte, inArray, like, ne, notExists, notInArray, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, inArray, like, ne, notInArray, sql } from 'drizzle-orm'
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite'
 import * as DocumentPicker from 'expo-document-picker'
 import { Paths } from 'expo-file-system'
@@ -33,6 +33,7 @@ import {
 } from 'db/schema'
 
 import { Logger } from './Logger'
+import { deleteMouthSprites } from './MouthSprites'
 import { createMMKVStorage } from '../storage/MMKV'
 
 export type CharInfo = {
@@ -157,16 +158,8 @@ export namespace Characters {
             {
                 name: Storage.UserCard,
                 storage: createMMKVStorage(),
-                version: 2,
+                version: 1,
                 partialize: (state) => ({ id: state.id, card: state.card }),
-                migrate: async (persistedState: any, version) => {
-                    if (version === 1) {
-                        // migration from CharacterCardV2 to CharacterCardData
-                        Logger.info('Migrating User Store to v2')
-                        persistedState.id = undefined
-                        persistedState.card = undefined
-                    }
-                },
             }
         )
     )
@@ -413,8 +406,7 @@ export namespace Characters {
                 limit = 20,
                 offset = 0,
                 searchFilter: string = '',
-                searchTags: string[] = [],
-                hiddenTags: string[] = []
+                searchTags: string[] = []
             ) => {
                 const dir = direction === 'asc' ? asc : desc
                 return database.query.characters.findMany({
@@ -430,21 +422,6 @@ export namespace Characters {
                         const search = searchFilter
                             ? like(characters.name, `%${searchFilter.trim().toLocaleLowerCase()}%`)
                             : undefined
-                        const hidden =
-                            hiddenTags.length > 0
-                                ? notExists(
-                                      database
-                                          .select()
-                                          .from(characterTags)
-                                          .innerJoin(tags, eq(characterTags.tag_id, tags.id))
-                                          .where(
-                                              and(
-                                                  eq(characterTags.character_id, characters.id),
-                                                  inArray(tags.tag, hiddenTags)
-                                              )
-                                          )
-                                  )
-                                : undefined
                         const filteredTags =
                             searchTags.length > 0
                                 ? gte(
@@ -462,7 +439,7 @@ export namespace Characters {
                                   )
                                 : undefined
 
-                        return and(base, search, hidden, filteredTags)
+                        return and(base, search, filteredTags)
                     },
                     with: {
                         tags: {
@@ -667,6 +644,7 @@ export namespace Characters {
                 })
                 if (data?.image_id) deleteImage(data.image_id)
                 if (data?.background_image) deleteImage(data.background_image)
+                deleteMouthSprites(charID)
 
                 await database.delete(characters).where(eq(characters.id, charID))
                 await database

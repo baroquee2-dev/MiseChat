@@ -11,7 +11,6 @@ import HeaderTitle from '@components/views/HeaderTitle'
 import { playCharacterListSound } from '@lib/audio/playInputFocusSound'
 import { Characters, CharInfo } from '@lib/state/Characters'
 import { CharacterSorter } from '@lib/state/CharacterSorter'
-import { TagHider } from '@lib/state/TagHider'
 
 import CharacterListHeader from './CharacterListHeader'
 import CharacterListing from './CharacterListing'
@@ -31,7 +30,6 @@ const CharacterList: React.FC = () => {
             textFilter: state.textFilter,
         }))
     )
-    const hiddenTags = TagHider.useHiddenTags()
     const [pages, setPages] = useState(3)
     const [previousLength, setPreviousLength] = useState(0)
     const { data, updatedAt } = useLiveQuery(
@@ -42,10 +40,9 @@ const CharacterList: React.FC = () => {
             PAGE_SIZE * pages,
             0,
             textFilter,
-            tagFilter,
-            hiddenTags
+            tagFilter
         ),
-        [searchType, searchOrder, textFilter, tagFilter, hiddenTags, pages]
+        [searchType, searchOrder, textFilter, tagFilter, pages]
     )
 
     const characterList: CharInfo[] = useMemo(() => {

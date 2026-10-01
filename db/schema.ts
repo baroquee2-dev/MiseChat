@@ -107,6 +107,12 @@ export const chats = sqliteTable('chats', {
     summary_updated_at: integer('summary_updated_at', { mode: 'number' }),
     summary_turn_count: integer('summary_turn_count', { mode: 'number' }).notNull().default(0),
     summary_token_count: integer('summary_token_count', { mode: 'number' }).notNull().default(0),
+    /** Author's note: steering text injected near the end of this chat's context. */
+    author_note: text('author_note').notNull().default(''),
+    /** Off keeps the note stored but out of the context; empty text counts as off too. */
+    author_note_enabled: integer('author_note_enabled', { mode: 'boolean' })
+        .notNull()
+        .default(true),
 })
 
 export const chatEntries = sqliteTable('chat_entries', {
@@ -138,7 +144,6 @@ export const chatSwipes = sqliteTable('chat_swipes', {
     gen_finished: integer('gen_finished', { mode: 'timestamp' })
         .notNull()
         .$defaultFn(() => new Date()),
-    timings: text('timings', { mode: 'json' }).$type<CompletionTimings>(),
 })
 
 /**
@@ -239,83 +244,32 @@ export const mediaAttachmentsRelations = relations(chatAttachments, ({ one }) =>
 // INSTRUCT
 
 const defaultSystemPrompt =
-    '{{system_prefix}}{{system_prompt}}\n{{character_desc}}\n{{personality}}\n{{scenario}}\n{{user_desc}}{{system_suffix}}'
+    '{{system_prompt}}\n{{character_desc}}\n{{personality}}\n{{scenario}}\n{{user_desc}}'
 
 export const instructs = sqliteTable('instructs', {
     id: integer('id', { mode: 'number' }).primaryKey(),
     name: text('name').notNull(),
 
     system_prompt: text('system_prompt').notNull(),
-    system_prefix: text('system_prefix').notNull(),
-    system_suffix: text('system_suffix').notNull(),
-    input_prefix: text('inpput_prefix').notNull(),
-    input_suffix: text('input_suffix').notNull(),
-    output_suffix: text('output_suffix').notNull(),
-    output_prefix: text('output_prefix').notNull(),
     stop_sequence: text('stop_sequence').notNull(),
     activation_regex: text('activation_regex').notNull(),
     user_alignment_message: text('user_alignment_message').notNull(),
-    wrap: integer('wrap', { mode: 'boolean' }).notNull(),
     macro: integer('macro', { mode: 'boolean' }).notNull(),
-    names: integer('names', { mode: 'boolean' }).notNull(),
-    names_force_groups: integer('names_force_groups', { mode: 'boolean' }).notNull(),
 
-    // Additions 3/7/2024, v2
     timestamp: integer('timestamp', { mode: 'boolean' }).notNull().default(false),
     examples: integer('examples', { mode: 'boolean' }).notNull().default(true),
     format_type: integer('format_type').notNull().default(0),
 
-    // additions 22/9/2024, v3
-    last_output_prefix: text('last_output_prefix').notNull().default(''),
-
-    // additions 17/10/2024 v4
     scenario: integer('scenario', { mode: 'boolean' }).notNull().default(true),
     personality: integer('personality', { mode: 'boolean' }).notNull().default(true),
 
-    // additions 5/5/2025 v5
     hide_think_tags: integer('hide_think_tags', { mode: 'boolean' }).notNull().default(true),
-    use_common_stop: integer('use_common_stop', { mode: 'boolean' }).notNull().default(true),
 
-    // additions 22/5/2025 v6
     send_images: integer('send_images', { mode: 'boolean' }).notNull().default(true),
     send_audio: integer('send_audio', { mode: 'boolean' }).notNull().default(true),
     send_documents: integer('send_documents', { mode: 'boolean' }).notNull().default(true),
     last_image_only: integer('last_image_only', { mode: 'boolean' }).notNull().default(true),
 
-    // additions 21/7/2025 v7
-    system_prompt_format: text('system_prompt_format').notNull().default(defaultSystemPrompt),
-})
-
-// INSTRUCT FORMATS (expert / model chat templates)
-
-export const instructFormats = sqliteTable('instruct_formats', {
-    id: integer('id', { mode: 'number' }).primaryKey(),
-    name: text('name').notNull(),
-
-    system_prefix: text('system_prefix').notNull(),
-    system_suffix: text('system_suffix').notNull(),
-    input_prefix: text('input_prefix').notNull(),
-    input_suffix: text('input_suffix').notNull(),
-    output_suffix: text('output_suffix').notNull(),
-    output_prefix: text('output_prefix').notNull(),
-    last_output_prefix: text('last_output_prefix').notNull().default(''),
-    stop_sequence: text('stop_sequence').notNull(),
-    activation_regex: text('activation_regex').notNull().default(''),
-    user_alignment_message: text('user_alignment_message').notNull().default(''),
-    wrap: integer('wrap', { mode: 'boolean' }).notNull().default(false),
-    macro: integer('macro', { mode: 'boolean' }).notNull().default(false),
-    names: integer('names', { mode: 'boolean' }).notNull().default(false),
-    names_force_groups: integer('names_force_groups', { mode: 'boolean' }).notNull().default(false),
-    timestamp: integer('timestamp', { mode: 'boolean' }).notNull().default(false),
-    examples: integer('examples', { mode: 'boolean' }).notNull().default(true),
-    scenario: integer('scenario', { mode: 'boolean' }).notNull().default(true),
-    personality: integer('personality', { mode: 'boolean' }).notNull().default(true),
-    hide_think_tags: integer('hide_think_tags', { mode: 'boolean' }).notNull().default(true),
-    use_common_stop: integer('use_common_stop', { mode: 'boolean' }).notNull().default(true),
-    send_images: integer('send_images', { mode: 'boolean' }).notNull().default(true),
-    send_audio: integer('send_audio', { mode: 'boolean' }).notNull().default(true),
-    send_documents: integer('send_documents', { mode: 'boolean' }).notNull().default(true),
-    last_image_only: integer('last_image_only', { mode: 'boolean' }).notNull().default(true),
     system_prompt_format: text('system_prompt_format').notNull().default(defaultSystemPrompt),
 })
 
@@ -391,76 +345,11 @@ export const characterLorebooksRelations = relations(characterLorebooks, ({ one 
 
 // export const characterGroupChats = sqliteTable('character_group_chats', {})
 
-// Model Data
-
-export const model_data = sqliteTable('model_data', {
-    id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
-    file: text('file').notNull().unique(),
-    name: text('name').notNull(),
-    file_path: text('file_path').notNull().unique().default(''),
-    file_size: integer('file_size').notNull().default(0),
-    params: text('params').notNull(),
-    quantization: text('quantization').notNull(),
-    context_length: integer('context_length').notNull(),
-    architecture: text('architecture').notNull(),
-    create_date: integer('create_date', { mode: 'number' })
-        .$defaultFn(() => Date.now())
-        .notNull(),
-    last_modified: integer('last_modified', { mode: 'number' })
-        .$defaultFn(() => Date.now())
-        .notNull()
-        .$onUpdateFn(() => Date.now()),
-})
-
-export const model_mmproj_links = sqliteTable(
-    'model_mmproj_links',
-    {
-        model_id: integer('model_id', { mode: 'number' })
-            .notNull()
-            .references(() => model_data.id, { onDelete: 'cascade' }),
-
-        mmproj_id: integer('mmproj_id', { mode: 'number' })
-            .notNull()
-            .references(() => model_data.id, { onDelete: 'cascade' }),
-    },
-    (table) => {
-        return {
-            pk: primaryKey({ columns: [table.model_id, table.mmproj_id] }),
-        }
-    }
-)
-
-export const modelDataRelations = relations(model_data, ({ one }) => ({
-    mmprojLink: one(model_mmproj_links, {
-        relationName: 'model_to_mmproj',
-        fields: [model_data.id],
-        references: [model_mmproj_links.model_id],
-    }),
-    modelLink: one(model_mmproj_links, {
-        relationName: 'mmproj_to_model',
-        fields: [model_data.id],
-        references: [model_mmproj_links.mmproj_id],
-    }),
-}))
-
 // Types
 
-export type ModelDataType = typeof model_data.$inferSelect
 export type ChatSwipe = typeof chatSwipes.$inferSelect
 export type ChatEntryType = typeof chatEntries.$inferSelect
 export type ChatType = typeof chats.$inferSelect
 export type ChatAttachmentType = typeof chatAttachments.$inferSelect
 export type ChatKeyFactType = typeof chatKeyFacts.$inferSelect
 export type ChatKeyFactCategory = (typeof CHAT_KEY_FACT_CATEGORIES)[number]
-
-export type CompletionTimings = {
-    predicted_per_token_ms: number
-    predicted_per_second: number | null
-    predicted_ms: number
-    predicted_n: number
-
-    prompt_per_token_ms: number
-    prompt_per_second: number | null
-    prompt_ms: number
-    prompt_n: number
-}

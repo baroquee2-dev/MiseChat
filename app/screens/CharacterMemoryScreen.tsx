@@ -175,7 +175,7 @@ const CharacterMemoryScreen = () => {
                                 color: color.text._300,
                                 paddingVertical: spacing.xl,
                             }}>
-                            {t('characterList.empty')}
+                            {t('memory.empty')}
                         </Text>
                     )}
                 />

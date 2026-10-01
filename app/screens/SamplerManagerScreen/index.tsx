@@ -19,8 +19,6 @@ import { SamplerID, Samplers } from '@lib/constants/SamplerData'
 import i18n, { tSamplerField } from '@lib/i18n'
 import { APIConfiguration, APISampler } from '@lib/engine/API/APIBuilder.types'
 import { APIManager as APIStateNew } from '@lib/engine/API/APIManagerState'
-import { localSamplerData } from '@lib/engine/LocalInference'
-import { useAppMode } from '@lib/state/AppMode'
 import { Logger } from '@lib/state/Logger'
 import { SamplersManager } from '@lib/state/SamplerState'
 import { Theme } from '@lib/theme/ThemeManager'
@@ -32,7 +30,6 @@ const SamplerManagerScreen = () => {
     const { t } = useTranslation()
     const styles = useStyles()
     const { spacing } = Theme.useTheme()
-    const { appMode } = useAppMode()
     const [showNewSampler, setShowNewSampler] = useState<boolean>(false)
 
     const {
@@ -54,7 +51,6 @@ const SamplerManagerScreen = () => {
     )
 
     const getSamplerList = (): APISampler[] => {
-        if (appMode === 'local') return localSamplerData
         if (activeIndex !== -1) {
             const template = getTemplates().find(
                 (item: APIConfiguration) => item.name === apiValues[activeIndex].configName
@@ -292,11 +288,7 @@ const SamplerManagerScreen = () => {
                         rowGap: 12,
                     }}>
                     <Text style={styles.noSamplersText}>{t('sampler.noSamplers')}</Text>
-                    {appMode === 'remote' && (
-                        <Text style={styles.noSamplersText}>
-                            {t('sampler.noApiYet')}
-                        </Text>
-                    )}
+                    <Text style={styles.noSamplersText}>{t('sampler.noApiYet')}</Text>
                 </View>
             )}
         </SafeAreaView>

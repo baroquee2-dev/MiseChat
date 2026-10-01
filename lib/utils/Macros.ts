@@ -1,5 +1,3 @@
-import { useTextFilterStore } from '@lib/hooks/TextFilter'
-
 export type Macro = {
     macro: string | RegExp
     value: string
@@ -13,19 +11,11 @@ const weekday = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday
 
 const getDefaultMacros = () => {
     const time = new Date()
-    let rules: Macro[] = [
+    const rules: Macro[] = [
         { macro: '{{time}}', value: time.toLocaleTimeString() },
         { macro: '{{date}}', value: time.toLocaleDateString() },
         { macro: '{{weekday}}', value: weekday[time.getDay()] },
     ]
-
-    const filterState = useTextFilterStore.getState()
-    if (!filterState.sendFilteredText) {
-        rules = [
-            ...rules,
-            ...filterState.filter.map((item) => ({ macro: new RegExp(item, 'gi'), value: '' })),
-        ]
-    }
     return rules
 }
 
