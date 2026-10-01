@@ -7,7 +7,7 @@ module.exports = {
         name: IS_DEV ? 'MiseChat (DEV)' : 'MiseChat',
         newArchEnabled: true,
         slug: 'MiseChat',
-        version: '0.1.0',
+        version: '0.3.0',
         orientation: 'default',
         icon: APP_ICON,
         scheme: 'misechat',
