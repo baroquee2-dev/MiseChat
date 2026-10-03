@@ -1,6 +1,7 @@
 import { AppSettings } from '@lib/constants/GlobalValues'
 import i18n from '@lib/i18n'
 import { buildThinkRules } from '@lib/markdown/ThinkTags'
+import { RetrievedMessage } from '@lib/retrieval/KeywordSearch'
 import { CharacterCardData, CharacterTokenCache } from '@lib/state/Characters'
 import { ChatEntry } from '@lib/state/Chat'
 import { defaultSystemPromptFormat, InstructTokenCache, InstructType } from '@lib/state/Instructs'
@@ -39,6 +40,7 @@ export interface ContextBuilderParams {
     cache: TokenCache
     summary?: string
     authorNote?: string
+    retrieved?: RetrievedMessage[]
     keyFacts?: ChatKeyFactType[]
     bypassContextLength?: boolean
     messageLoader?: MessageLoader
@@ -70,6 +72,7 @@ export const buildChatCompletionContext = async ({
     cache,
     summary,
     authorNote,
+    retrieved,
     keyFacts,
     instruct,
     tokenizer,
@@ -95,7 +98,30 @@ export const buildChatCompletionContext = async ({
     const summaryContext = formatSummaryContext(summary) + formatKeyFactsForContext(keyFacts)
     const summaryLength = summaryContext ? await tokenizer(summaryContext) : 0
     const initial = systemPrompt + summaryContext
-    let total_length = systemPromptLength + summaryLength
+
+    /**
+     * Charged before the history is gathered, exactly as the summary is. The loop
+     * below fills the context to the brim, so anything billed afterwards never
+     * fits — and it would be the long chats, the only ones retrieval helps, that
+     * silently lost it. Overlapping entries are dropped after the loop, which can
+     * only make the real cost smaller than what was set aside here.
+     *
+     * Capped at a slice of what is left, and dropped outright when it will not fit
+     * in that slice. Recall is an extra; the conversation itself must never be the
+     * thing that gets squeezed out to make room for it.
+     */
+    const retrievedEstimate = retrieved?.length
+        ? await tokenizer(formatRetrievedContext(retrieved))
+        : 0
+    const headroom = Math.max(0, maxLength - systemPromptLength - summaryLength)
+    const retrievedFits =
+        retrievedEstimate > 0 &&
+        (bypassContextLength || retrievedEstimate <= headroom * RETRIEVED_BUDGET_SHARE)
+    if (retrievedEstimate > 0 && !retrievedFits) {
+        Logger.warn('Dropped recalled history, too little context left for it')
+    }
+    const retrievedReserve = retrievedFits ? retrievedEstimate : 0
+    let total_length = systemPromptLength + summaryLength + retrievedReserve
     let first_message_reached = false
 
     const payload: Message[] = [
@@ -109,6 +135,8 @@ export const buildChatCompletionContext = async ({
     let index = messages.length - 1
     const hasSummary = !!summary?.trim()
     let turnCount = 0
+    /** How far back the raw history reaches, which is what retrieval must not duplicate. */
+    let oldestIncludedOrder = Infinity
     for (const message of messages.reverse()) {
         if (hasSummary && turnCount >= MAX_TURNS_WITH_SUMMARY) break
 
@@ -121,7 +149,10 @@ export const buildChatCompletionContext = async ({
 
         const len = message.id !== -1 ? await chatTokenizer(message, index) : 0
 
-        if (total_length + len > maxLength && !bypassContextLength) break
+        // One message always goes in: every provider rejects a request with no contents,
+        // and a request that is too long fails more usefully than one that is empty.
+        if (total_length + len > maxLength && !bypassContextLength && messageBuffer.length > 0)
+            break
         hasImage = hasImageNew
 
         const prefill = index === messages.length - 1 ? apiValues.prefill : ''
@@ -175,6 +206,7 @@ export const buildChatCompletionContext = async ({
             })
         }
         first_message_reached = index === 0
+        if (message.order < oldestIncludedOrder) oldestIncludedOrder = message.order
         total_length += len
         if (message.is_user) turnCount++
         index--
@@ -194,6 +226,23 @@ export const buildChatCompletionContext = async ({
         total_length += characterCache.examples_length
     }
 
+    /**
+     * Only now is it known how far back the raw history reached, so only now can
+     * the messages that are already in the context be dropped from the recalled
+     * set. Pulling one of those back would spend tokens to repeat a message and
+     * label it as old when it is not.
+     */
+    const recalled = retrievedFits
+        ? (retrieved?.filter((item) => item.order < oldestIncludedOrder) ?? [])
+        : []
+    if (retrieved?.length) {
+        // Says plainly which stage dropped things, since a silent nothing looks the same
+        Logger.info(
+            `Recalled ${recalled.length} of ${retrieved.length} matches; raw history reaches back to message ${oldestIncludedOrder}`
+        )
+    }
+    const retrievedContext = formatRetrievedContext(recalled)
+
     if (apiConfig.features.useFirstMessage && apiValues.firstMessage)
         messageBuffer.push({
             role: completionFeats.userRole,
@@ -201,6 +250,15 @@ export const buildChatCompletionContext = async ({
         })
 
     const output = [...payload, ...messageBuffer.reverse()]
+
+    // Before the author's note, so the user's own steering stays closest to the model.
+    if (retrievedContext) {
+        const insertAt = Math.max(1, output.length - RETRIEVED_DEPTH)
+        output.splice(insertAt, 0, {
+            role: completionFeats.systemRole,
+            [completionFeats.contentName]: replaceMacrosInternal(retrievedContext, instruct),
+        })
+    }
 
     if (authorNote?.trim()) {
         // Never before the system prompt, and never past the start of the history.
@@ -243,6 +301,37 @@ const MAX_TURNS_WITH_SUMMARY = 20
  * leaving the latest turns closest to the model.
  */
 const AUTHOR_NOTE_DEPTH = 3
+
+/**
+ * Recalled history sits just behind the author's note, for the same reason it is
+ * placed near the end at all: attention favours what comes last, and detail
+ * dropped at the top of a long prompt tends to be read past.
+ *
+ * Keeping it out of the opening system turn also matters for cost. Providers cache
+ * on the longest shared prefix, and this block is recomputed from whatever the user
+ * just typed, so at the top it would invalidate the cache for the entire prompt
+ * every single turn. Here it only costs the last few messages.
+ */
+const RETRIEVED_DEPTH = 5
+
+/**
+ * The most of the remaining context recall may claim before it is dropped instead.
+ * Four snippets run to roughly 900 tokens at worst, which clears this bar on a
+ * default context even behind a fat character card, while still leaving the
+ * conversation three quarters of the room.
+ */
+const RETRIEVED_BUDGET_SHARE = 0.25
+
+/**
+ * Old messages pulled back by keyword retrieval. They sit among the recent turns,
+ * so the fence and the opening line are what stop the model reading them as things
+ * that just happened and replying to them.
+ */
+const formatRetrievedContext = (retrieved?: RetrievedMessage[]) => {
+    if (!retrieved?.length) return ''
+    const lines = retrieved.map((item) => `${item.name}: ${item.text}`).join('\n')
+    return `\n\n<recalled_history>\n${i18n.t('chat.retrievedContextIntro')}\n${lines}\n</recalled_history>`
+}
 
 const formatSummaryContext = (summary?: string) => {
     if (!summary?.trim()) return ''

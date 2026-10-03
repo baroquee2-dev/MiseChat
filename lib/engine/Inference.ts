@@ -2,7 +2,8 @@ import BackgroundService from 'react-native-background-actions'
 import i18n from '@lib/i18n'
 
 import { AppSettings, APP_NAME, APP_SCHEME } from '@lib/constants/GlobalValues'
-import { Chats, useInference } from '@lib/state/Chat'
+import { retrieveForLatestTurn } from '@lib/retrieval/KeywordSearch'
+import { ChatEntry, Chats, useInference } from '@lib/state/Chat'
 import { Instructs } from '@lib/state/Instructs'
 import { SamplersManager } from '@lib/state/SamplerState'
 import { useTTSStore } from '@lib/state/TTS'
@@ -162,6 +163,19 @@ const titleGeneratorStream = async (chatId: number) => {
     await buildAndSendRequest(fields)
 }
 
+/**
+ * Says out loud when recall is switched off. Silence either way is impossible to
+ * tell apart from the feature being broken, which costs more to chase than the
+ * one log line costs to print.
+ */
+const retrieveIfEnabled = (messages: ChatEntry[]) => {
+    if (!mmkv.getBoolean(AppSettings.KeywordRetrieval)) {
+        Logger.debug('Keyword retrieval is off')
+        return []
+    }
+    return retrieveForLatestTurn(messages)
+}
+
 const getModelContextLength = (config: APIConfiguration, values: APIValues): number | undefined => {
     const keys = config.model.contextSizeParser.split('.')
     const result = keys.reduce((acc, key) => acc?.[key], values.model)
@@ -236,6 +250,7 @@ async function obtainFields(): Promise<APIBuilderParams | void> {
             authorNote: chatState.data?.author_note_enabled
                 ? chatState.data?.author_note
                 : '',
+            retrieved: retrieveIfEnabled(messages),
             keyFacts: chatState.data?.keyFacts,
             stopSequence: stopSequence,
             stopGenerating: () => {},

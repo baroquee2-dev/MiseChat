@@ -17,6 +17,7 @@ export enum AppSettings {
     KeepAwake = 'settings-keep-awake',
     AutoSummary = 'settings-auto-summary',
     AutoExtractKeyFacts = 'settings-auto-extract-key-facts',
+    KeywordRetrieval = 'settings-keyword-retrieval',
 }
 
 /**
@@ -41,6 +42,7 @@ export const AppSettingsDefault: Record<AppSettings, boolean> = {
     [AppSettings.KeepAwake]: true,
     [AppSettings.AutoSummary]: false,
     [AppSettings.AutoExtractKeyFacts]: false,
+    [AppSettings.KeywordRetrieval]: false,
 }
 
 export const CLAUDE_VERSION = '2023-06-01'
