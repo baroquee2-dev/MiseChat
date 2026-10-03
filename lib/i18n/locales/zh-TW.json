@@ -129,7 +129,8 @@
         "earlierMessage": "▼ {{count}} 則更早的訊息",
         "earlierMessages": "▼ {{count}} 則更早的訊息",
         "importNoCharacter": "匯入聊天時缺少角色或使用者",
-        "importFailed": "匯入失敗"
+        "importFailed": "匯入失敗",
+        "retrievedContextIntro": "以下是從這段對話的早期紀錄中找出的相關片段，僅供參考，不是剛剛發生的事："
     },
     "nav": {
         "sampler": "取樣器",
@@ -722,7 +723,9 @@
         "contentManagement": "內容管理",
         "contentManagementDesc": "選擇角色並手動編輯或檢視該角色的長期記憶內容。",
         "selectCharacter": "選擇角色",
-        "empty": "目前尚無自動記憶內容。"
+        "empty": "目前尚無自動記憶內容。",
+        "keywordRetrieval": "關鍵字檢索",
+        "keywordRetrievalDesc": "每次回覆前，從這段對話的舊訊息裡找出與你剛才所說內容字面相關的幾則，一併提供給 AI。摘要記得住劇情走向，這個補的是摘要留不住的具體細節。完全在手機上運算，不需要金鑰也不會額外花費。"
     },
     "keyFacts": {
         "instruction": "你現在是角色扱演對話的事實擷取器，不是聊天角色。\n\n比對「已知事實」與「本輪對話」，只輸出變動的部分，格式為 JSON 陣列。不要有任何說明文字、Markdown、程式碼區塊或前後綴。\n\n陣列中每個元素都是物件，包含以下欄位：\n- \"op\"：\"add\" 表示清單中沒有的新事實；\"update\" 表示既有事實的內容改變了；\"stale\" 表示既有事實已履行、已取消或不再成立。\n- \"category\"：必須是 identity、relationship、commitment、world、preference 其中之一。\n  - identity：角色或使用者的姓名、年齡、職業、外貌、能力等穩定設定\n  - relationship：角色與使用者之間的關係、信任程度、稱呼方式\n  - commitment：承諾、約定、待辦事項、未解決的衝突\n  - world：世界觀、場景、地點、勢力、規則等背景設定\n  - preference：喜好、厭惡、習慣、禁忌\n- \"key\"：事實的簡短名稱，最多 20 字。若該事實已存在於「已知事實」中，必須「完全沿用」原本的 key，才能就地更新而不會產生重複條目。\n- \"value\"：該事實目前的狀態，一句話。\n- \"note\"：當 op 為 \"update\" 或 \"stale\" 時，用一句話說明改變了什麼、為什麼改變。op 為 \"add\" 時請填 \"\"。\n\n規則：\n- 若沒有任何值得長期記住的變動，就輸出 []。不要重複列出沒有變化的事實。\n- 只記錄在很多輪對話之後仍然重要的事實。閒聊、一次性動作、短暫的情緒起伏交給摘要處理，不要記。\n- 絕對不要杜撰對話中沒有出現的內容。\n- 絕對不要刪除事實，改用 \"stale\" 標記。\n- key、value、note 請使用與「本輪對話」相同的語言。若對話混用多種語言，以角色回覆所用的語言為準。\n\n輸出範例：\n[{\"op\":\"add\",\"category\":\"identity\",\"key\":\"職業\",\"value\":\"在圖書館上夜班。\",\"note\":\"\"},{\"op\":\"update\",\"category\":\"world\",\"key\":\"目前所在地\",\"value\":\"廢棄的天文台。\",\"note\":\"本輪從鎮上廣場移動過來。\"}]",

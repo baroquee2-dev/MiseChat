@@ -27,6 +27,7 @@ const CharacterMemoryScreen = () => {
     const [autoExtractKeyFacts, setAutoExtractKeyFacts] = useMMKVBoolean(
         AppSettings.AutoExtractKeyFacts
     )
+    const [keywordRetrieval, setKeywordRetrieval] = useMMKVBoolean(AppSettings.KeywordRetrieval)
     const [showCharacterSheet, setShowCharacterSheet] = useState(false)
 
     const { data } = useLiveQuery(Characters.db.query.charactersWithSummary(), [])
@@ -60,6 +61,13 @@ const CharacterMemoryScreen = () => {
                     description={t('memory.autoExtractKeyFactsDesc')}
                     value={autoExtractKeyFacts}
                     onChangeValue={setAutoExtractKeyFacts}
+                />
+
+                <ThemedSwitch
+                    label={t('memory.keywordRetrieval')}
+                    description={t('memory.keywordRetrievalDesc')}
+                    value={keywordRetrieval}
+                    onChangeValue={setKeywordRetrieval}
                 />
 
                 <View style={{ marginTop: spacing.xl2, marginBottom: spacing.m }}>

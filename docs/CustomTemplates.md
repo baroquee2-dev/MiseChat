@@ -1,6 +1,6 @@
 # Custom API Configurations
 
-This is a guide to adding custom API Configurations to ChatterUI.
+This is a guide to adding custom API Configurations to MiseChat.
 
 To add a custom API template, create a json file containing a configuration, such as [exampleTemplate.json](https://github.com/baroquee2-dev/MiseChat/blob/dev/docs/exampleTemplate.json)
 
@@ -21,26 +21,26 @@ Below is an explanation of what each field does:
     -   `firstMessage: string` - firstMessage preamble (only used for Claude)
     -   `key: string` - API key for authorized backends
     -   `model: any` - generic model object or object array retrieved from the modelEndpoint
-    -   `configName: string` - (only internally in ChatterUI) name of the template to be used
+    -   `configName: string` - (only internally in MiseChat) name of the template to be used
 -   `APIFeatures` - These are self explanatory
     -   `usePrefill: boolean`
     -   `useFirstMessage: boolean`
     -   `useKey: boolean`
     -   `useModel: boolean`
-    -   `multipleModels: boolean` - This isn't really used aside Horde
+    -   `multipleModels: boolean` - Not used by any bundled template
 -   `APIRequestFormat` - This controls how the final API request is structured and sent
-    -   `requestType: 'stream' | 'horde'` - All responses are streamed, horde requires a unique handler due to not using a SSE stream
+    -   `requestType: 'stream'` - All responses are streamed over SSE
     -   `samplerFields: APISampler[]` - This is an array mapping a sampler to a value in the request body, for example:
         -   `{ "externalName": "max_context_length", "samplerID": "max_length" }`
             -   In the request body, this will result in `"max_context_length": <value of max_length>`
             -   `externalName` - The name used by the API
-            -   `samplerID` - Internal sampler name in ChatterUI. Refer to the `Key` values in the Sampler table below
+            -   `samplerID` - Internal sampler name in MiseChat. Refer to the `Key` values in the Sampler table below
     -   `useStop: boolean` - Whether or not to add a `stop sequence` field
     -   `stopKey: string` - The key of the stop sequence in the request body
         -   For example, if defined as "stop", the stop sequence will be added as `"stop" : <stop sequence>`
     -   `promptKey: string` - The key of the prompt value
         -   For example, if defined as "messages", the prompt will be added as `"messages" : <prompt>`
-    -   `completionType` - currently supports ChatCompletions and TextCompletions
+    -   `completionType` - chat completions only; text completion support was removed
         -   Refer to [ContextBuilder.ts](https://github.com/baroquee2-dev/MiseChat/blob/dev/lib/engine/API/ContextBuilder.ts) to see how the prompts are built.
         -   `type: chatCompletions` - Though the fields below can be customized, most APIs use the same values as OpenAI
             -   `userRole: string` - the name of the [USER] role
@@ -49,17 +49,15 @@ Below is an explanation of what each field does:
             -   `contentName: string` - the key of the [CONTENT] field
             -   `supportsImages: boolean` - whether or not this API has image input
             -   `supportsAudio: boolean` whether or not this API has audio input
-        -   `type: textCompletions` - Use this if the API uses text completions
     -   `authHeader: 'Authorization' | 'X-API-KEY' | string` - The header key for authorization
     -   `authPrefix: 'Bearer ' | string` - A prefix before the API key value in the authorization header
     -   `removeLength: boolean` - when `max_length` is defined as a sampler, it can be used for controlling context size client-side, even if the API used doesn't support it. This allows you to remove the `max_length` field from the final request body in case the API used does not allow unsupported fields.
     -   `removeSeedifNegative?: boolean` - Some APIs only allow seed values of at least 0, and prefer an undefined seed for random seed values. This will remove the seed value if it is `-1` from the final request body.
 -   `APIPayloadFormat` - Refer to [RequestBuilder.ts](https://github.com/baroquee2-dev/MiseChat/blob/dev/lib/engine/API/RequestBuilder.ts) for how the request body is constructed
-    -   `type: 'openai' | 'ollama' | 'cohere' | 'horde'`
+    -   `type: 'openai' | 'cohere' | 'claude'`
         -   openai - This is the general case request body type, that simply throws all the fields into the base object
-        -   ollama - This wraps the samplers and stop sequence in an `options` object
         -   cohere - This is a unique structure for Cohere, however they also support the OpenAI spec, so it isn't actually used.
-        -   horde - Only used for horde, do not use otherwise
+        -   claude - Anthropic's structure, which carries the system prompt outside the message list
     -   `type: custom`
         -   `customPayload: string` - This is a very experimental feature, it allows you to define a string with macros that will define the JSON body of the request.
             -   This payload supports sampler macros as listed below in the Samplers table using the `Macro` values.
@@ -118,7 +116,10 @@ Below is an explanation of what each field does:
 | Mirostat Mode              |    mirostat_mode     |      {{miro_mode}}      |
 | Mirostat Tau               |     mirostat_tau     |      {{miro_tau}}       |
 | Mirostat Eta               |     mirostat_eta     |      {{miro_eta}}       |
-| Include Reasoning          |  include_reasoning   |  {{include_reasoning}}  |
+| Reasoning Effort           |   reasoning_effort   |  {{reasoning_effort}}   |
+| Reasoning Tokens           | reasoning_max_tokens |  {{reasoning_tokens}}   |
+| Exclude Reasoning          |  reasoning_exclude   |  {{exclude_reasoning}}  |
+| Enable Thinking            |   enable_thinking    |   {{enable_thinking}}   |
 | Ban EOS tokens             |    ban_eos_token     |       {{ban_eos}}       |
 | Add BOS Token              |    add_bos_token     |       {{add_bos}}       |
 | Do Sample                  |      do_sample       |      {{do_sample}}      |
