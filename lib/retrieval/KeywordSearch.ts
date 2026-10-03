@@ -1,5 +1,4 @@
 import { ChatEntry } from '@lib/state/Chat'
-import { Logger } from '@lib/state/Logger'
 
 /**
  * Keyword retrieval over one chat's own history, scored with BM25.
@@ -181,8 +180,5 @@ export const retrieveForLatestTurn = (messages: ChatEntry[]): RetrievedMessage[]
     const lastUserEntry = [...messages].reverse().find((entry) => entry.is_user)
     const query = lastUserEntry ? activeSwipe(lastUserEntry) : ''
     if (!query.trim()) return []
-    const results = searchChatHistory(messages, query)
-    const searchable = Math.max(0, messages.length - RECENT_EXCLUSION)
-    Logger.info(`Keyword retrieval: ${results.length} matches from ${searchable} older messages`)
-    return results
+    return searchChatHistory(messages, query)
 }

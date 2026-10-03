@@ -164,15 +164,12 @@ const titleGeneratorStream = async (chatId: number) => {
 }
 
 /**
- * Says out loud when recall is switched off. Silence either way is impossible to
- * tell apart from the feature being broken, which costs more to chase than the
- * one log line costs to print.
+ * Undefined when recall is switched off, as against an empty array for on and
+ * nothing found. The context builder reports on the second and stays quiet about
+ * the first, which it could not do if both arrived the same way.
  */
 const retrieveIfEnabled = (messages: ChatEntry[]) => {
-    if (!mmkv.getBoolean(AppSettings.KeywordRetrieval)) {
-        Logger.debug('Keyword retrieval is off')
-        return []
-    }
+    if (!mmkv.getBoolean(AppSettings.KeywordRetrieval)) return undefined
     return retrieveForLatestTurn(messages)
 }
 

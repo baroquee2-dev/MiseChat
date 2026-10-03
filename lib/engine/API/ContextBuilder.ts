@@ -235,11 +235,9 @@ export const buildChatCompletionContext = async ({
     const recalled = retrievedFits
         ? (retrieved?.filter((item) => item.order < oldestIncludedOrder) ?? [])
         : []
-    if (retrieved?.length) {
-        // Says plainly which stage dropped things, since a silent nothing looks the same
-        Logger.info(
-            `Recalled ${recalled.length} of ${retrieved.length} matches; raw history reaches back to message ${oldestIncludedOrder}`
-        )
+    // One line whenever recall is on, so a quiet turn still proves it ran
+    if (retrieved) {
+        Logger.info(`Keyword recall: added ${recalled.length} of ${retrieved.length} matches`)
     }
     const retrievedContext = formatRetrievedContext(recalled)
 
