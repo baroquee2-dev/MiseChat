@@ -35,13 +35,10 @@ This is the primary theme color which generally determines the color of inputs a
       - (User menu):
         - "Save"
         - "New User"
-      - (Models menu):
-        - "Show settings"
-        - "Back to models"
       - (Chat sidebar): "Start new chat"
 - `_300`: 
     - Frame color of:
-      - (Main sidebar): Active app mode
+      - (Main sidebar): Active entry
       - (User profiles sidebar): User pfp.
     - Background color of:
       - Drop-down menu.
@@ -56,7 +53,6 @@ This is the primary theme color which generally determines the color of inputs a
         - Export frame.
 - `_500`:
     - Active slider head.
-    - "Model loaded" arrow in chat interface.
     - Horizontal line in chat.
     - Frame color of:
         - (User profiles sidebar): 
@@ -92,14 +88,11 @@ This is the color used for surfaces - though it scales up to \_900, currently th
     - Background color of:
         - Popup.
         - Inactive character sort.
-        - (Model menu): Model cards.
         - (User menu): Edit pfp button.
-        - (Chat):
-            - Media attachment.
-            - "Model Loaded"
+        - (Chat): Media attachment.
         - (Formatting menu): Drop-down input filter.
     - Frame color of:
-        - Inactive app mode.
+        - Inactive sidebar entry.
         - Character pfp
         - (Character search):
             - Tag filter.
